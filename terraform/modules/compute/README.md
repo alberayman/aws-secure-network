@@ -1,6 +1,6 @@
 # compute module
 
-**Owners:** Member 2 (Servers and database: EC2/ALB/RDS) · Member 4 (Edge and access security: `security_groups.tf`, `iam.tf`) · **Week:** 1
+**Owners:** Member 2 – Ahlam (Servers and database: EC2/ALB/RDS) · Member 4 – Asmaa (Edge and access security: `security_groups.tf`, `iam.tf`) · **Week:** 1
 
 Private EC2 web server (nginx, IMDSv2, encrypted disk, SSM only), internet-facing ALB,
 private encrypted RDS MySQL with the password managed by Secrets Manager, and the SG chain

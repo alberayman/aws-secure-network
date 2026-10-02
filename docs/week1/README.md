@@ -6,13 +6,13 @@ Guide: [`docs/guides/`](../guides/) · Evidence: [`docs/evidence/week1/`](../evi
 
 | Deliverable | Member(s) | Status | Link |
 |---|---|---|---|
-| VPC design | 1 | Not started | |
-| Subnet / CIDR plan | 1 | Not started | |
-| EC2 / ALB / RDS deployment | 2 | Not started | |
-| SG / NACL rules matrix | 4 | Not started | |
-| Architecture diagram | 1 | Not started | |
-| Connectivity test results | 2 | Not started | |
-| Bastion vs SSM comparison (extra, answers "bastion/SSM access") | 4, 2 | Not started | |
+| VPC design | 1 Taghride | Not started | |
+| Subnet / CIDR plan | 1 Taghride | Not started | |
+| EC2 / ALB / RDS deployment | 2 Ahlam | Not started | |
+| SG / NACL rules matrix | 4 Asmaa | Not started | |
+| Architecture diagram | 1 Taghride | Not started | |
+| Connectivity test results | 2 Ahlam | Not started | |
+| Bastion vs SSM comparison (extra, answers "bastion/SSM access") | 4 Asmaa, 2 Ahlam | Not started | |
 
 ## What we built
 

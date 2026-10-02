@@ -6,12 +6,12 @@ Guide: [`docs/guides/`](../guides/) · Evidence: [`docs/evidence/week2/`](../evi
 
 | Deliverable | Member(s) | Status | Link |
 |---|---|---|---|
-| Hub-and-spoke / TGW diagram | 1 | Not started | |
-| Peering + endpoint setup | 3, 4 | Not started | |
-| VPN configuration (no secrets) | 3 | Not started | |
-| Route table documentation | 1 | Not started | |
-| Hybrid connectivity test report | 2 | Not started | |
-| Client VPN lab + Direct Connect design (booklet task) | 3, 4 | Not started | |
+| Hub-and-spoke / TGW diagram | 1 Taghride | Not started | |
+| Peering + endpoint setup | 3 Mohamed, 4 Asmaa | Not started | |
+| VPN configuration (no secrets) | 3 Mohamed | Not started | |
+| Route table documentation | 1 Taghride | Not started | |
+| Hybrid connectivity test report | 2 Ahlam | Not started | |
+| Client VPN lab + Direct Connect design (booklet task) | 3 Mohamed, 4 Asmaa | Not started | |
 
 ## What we built
 

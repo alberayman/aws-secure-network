@@ -1,6 +1,6 @@
 # Incident response runbook: compromised EC2 instance (case IR-001)
 
-Owner: Member 5 (with Member 4 for containment). Steps and commands: Guide 4.
+Owner: Member 5 – Ahmed (with Member 4 – Asmaa for containment). Steps and commands: Guide 4.
 All times in **UTC**.
 
 | Phase | Who | What | How (console / CLI) | Evidence produced |

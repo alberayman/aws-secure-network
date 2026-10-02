@@ -1,6 +1,6 @@
 # vpc module
 
-**Owner:** Member 1 (Networking) · **Week:** 1 (NACL update in Week 2)
+**Owner:** Member 1 – Taghride (Networking) · **Week:** 1 (NACL update in Week 2)
 
 Hub VPC with 2 public + 2 private subnets in 2 AZs, Internet Gateway, one NAT Gateway,
 public/private route tables, a locked-down default security group and a private-tier NACL.

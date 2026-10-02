@@ -1,6 +1,6 @@
 # monitoring module
 
-**Owner:** Member 5 (Logging and incident response) · **Weeks:** 1 (CloudTrail, bucket) · 2 (Flow Logs) · 4 (Athena)
+**Owner:** Member 5 – Ahmed (Logging and incident response) · **Weeks:** 1 (CloudTrail, bucket) · 2 (Flow Logs) · 4 (Athena)
 
 Private, versioned, encrypted log bucket (TLS-only policy, 30-day expiry), multi-region **CloudTrail** with
 log-file validation, **VPC Flow Logs** for every VPC passed in `vpc_ids`, an **Athena** workgroup + database

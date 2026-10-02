@@ -1,4 +1,6 @@
 # Replace @memberN with real GitHub usernames. A PR touching these paths requests that member's review.
+# @member1 = Taghride Ahmed Gadelrab Abdelhafez | @member2 = Ahlam Reda Abdelmonim Ahmed | @member3 = Mohamed AbdElMeged Hagag
+# @member4 = Asmaa Salah Elsayed Abbas | @member5 = Ahmed Abd El Haleem El Araby | @alberayman = Alber Ayman Mokhtar Fouad
 /terraform/modules/vpc/            @member1
 /terraform/envs/dev/dns.tf         @member1
 /terraform/modules/compute/        @member2

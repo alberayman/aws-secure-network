@@ -1,6 +1,6 @@
 # edge module
 
-**Owner:** Member 4 (Edge and access security) · **Week:** 3
+**Owner:** Member 4 – Asmaa (Edge and access security) · **Week:** 3
 
 Private, encrypted, versioned S3 bucket → CloudFront with **Origin Access Control** and HTTPS redirect
 → **AWS WAF** web ACL (4 AWS managed rule groups + rate limit + geo block) → Shield Standard (automatic).

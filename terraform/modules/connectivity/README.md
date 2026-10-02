@@ -1,6 +1,6 @@
 # connectivity module
 
-**Owner:** Member 3 (Hybrid connectivity) · **Week:** 2
+**Owner:** Member 3 – Mohamed (Hybrid connectivity) · **Week:** 2
 
 Spoke A (`10.1.0.0/16`) over **VPC peering**, Spoke B (`10.2.0.0/16`) over **Transit Gateway**,
 and a simulated office (`192.168.0.0/16`) with a **strongSwan** router connected by
