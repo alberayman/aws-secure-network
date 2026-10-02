@@ -119,15 +119,16 @@ All code for all four weeks is already in `terraform/envs/dev/`. What gets built
 
 | Switch | Week | Builds | Rough cost while on |
 |---|---|---|---|
-| (always on) | 1 | Hub VPC, EC2, ALB, RDS, CloudTrail, logs, budget | ~$0.10/h |
+| (always on) | 1 | Hub VPC, EC2, ALB, RDS, CloudTrail, S3 + CloudWatch flow logs, network alarms, budget | ~$0.10/h |
 | `enable_nat` | 1+ | NAT gateway (private hosts reach the internet) | ~$0.05/h |
 | `enable_hybrid` | 2 | Spokes, peering, Transit Gateway, endpoints, PrivateLink, test hosts | ~$0.25/h |
 | `enable_vpn` | 2 | Simulated office + Site-to-Site VPN | ~$0.07/h |
+| `enable_client_vpn` (+ 2 cert ARNs) | 2 lab | Client VPN endpoint for remote users | ~$0.15/h while connected |
 | `enable_edge` | 3 | CloudFront, S3 site, WAF, Route 53, WAF alarm | ~$11/month prorated |
 | `enable_ir` / `isolate_victim` | 4 | Victim host, snapshot, quarantine SG / the containment drill | ~$0.02/h |
 | `enable_mirroring` | 4 | Traffic Mirroring target + session | ~$0.03/h |
 
-Turn a switch to `true` > `plan` > `apply`. Turn it back to `false` > `plan` (shows only destroys) > `apply`. At the end of each session: `make sleep` (turns off NAT, hybrid, VPN, mirroring).
+Turn a switch to `true` > `plan` > `apply`. Turn it back to `false` > `plan` (shows only destroys) > `apply`. At the end of each session: `make sleep` (turns off NAT, hybrid, VPN, Client VPN, mirroring).
 
 ---
 

@@ -7,7 +7,7 @@ Guide: [`docs/guides/`](../guides/) · Evidence: [`docs/evidence/week4/`](../evi
 | Deliverable | Member(s) | Status | Link |
 |---|---|---|---|
 | Flow log queries | 5 | Not started | |
-| Detection use cases | 5 | Not started | |
+| Detection use cases (Athena + CloudWatch alarms) | 5 | Not started | |
 | Compromised-instance IR runbook | 5, 4 | Not started | |
 | Evidence collection notes | 2, 5 | Not started | |
 | Final secure network report | 6 | Not started | |

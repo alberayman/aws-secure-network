@@ -12,6 +12,7 @@ Order: **1.1** first (everyone needs the VPC) → **1.2** and **1.3** in paralle
 | 1.3 Security groups, IAM | 4 Edge and access security | `modules/compute/security_groups.tf`, `iam.tf` |
 | 1.4 CloudTrail, log bucket, Athena | 5 Logging and IR | `modules/monitoring/main.tf` |
 | 1.5 Repo, state, CI, budget | 6 Repo, CI and reporting | `envs/dev/versions.tf`, `budget.tf`, `.github/` |
+| 1.6 Bastion vs SSM (comparison + optional lab) | 4 (with 2) | none (console lab) |
 | Week 1 apply | one person (agreed in chat) | `envs/dev/main.tf` |
 
 ---
@@ -198,3 +199,34 @@ terraform output
 
 ### Clean up at the end of each session
 `make sleep` (switches off the NAT and anything from later weeks). RDS can also be **stopped** for up to 7 days from the console (*Actions > Stop temporarily*); Terraform will not fight that.
+
+---
+
+## 1.6 Member 4 (with Member 2): bastion host vs SSM Session Manager
+
+The booklet asks for "bastion/SSM access". We **build SSM** (1.2). We **prove why** with a short bastion lab, then delete the bastion. The panel will ask why we have no bastion, so this section is that answer.
+
+### The comparison (write it in `docs/week1/bastion-vs-ssm.md`)
+| | Bastion host (jump box) | SSM Session Manager (our choice) | EC2 Instance Connect Endpoint |
+|---|---|---|---|
+| How you get in | SSH to a public EC2, then SSH on to private hosts | browser or `aws ssm start-session`, over HTTPS | SSH through an AWS-managed endpoint into the VPC |
+| Open inbound ports | 22 on the bastion (internet-facing) + 22 from bastion to hosts | **none** | 22 from the endpoint only |
+| Credentials | SSH keys to create, share, rotate, revoke | IAM users + MFA you already have | IAM + short-lived keys |
+| Audit | bastion OS logs, easy to tamper with | every session in CloudTrail, optional full transcript to S3/CloudWatch | CloudTrail |
+| Public IP needed | yes (bastion) | no | no |
+| Extra cost | 1 EC2 running 24/7 | free (needs the NAT or VPC endpoints) | free |
+| Patching | you patch the bastion | AWS-managed agent | AWS-managed |
+| Verdict | legacy pattern, larger attack surface | ✅ best for this project | good when a tool truly needs SSH |
+
+### Optional lab (console only, about 30 minutes, delete the same day)
+1. **EC2** > **Key pairs** > Create `secnet-bastion-key` (RSA, `.pem`). It downloads once. Keep it **outside** the repo (`.gitignore` blocks `*.pem` anyway).
+2. Find your public IP (`curl -s https://checkip.amazonaws.com`).
+3. **Launch instance** `secnet-bastion`: Amazon Linux 2023, `t3.micro`, key `secnet-bastion-key`, **public** subnet 1, auto-assign public IP **Enable**, new SG `secnet-bastion-sg` with inbound **SSH 22 from `<your-ip>/32` only**. Never use `0.0.0.0/0` for SSH.
+4. From your laptop: `chmod 400 secnet-bastion-key.pem && ssh -i secnet-bastion-key.pem ec2-user@<bastion-public-ip>`.
+5. Show the risk: **CloudTrail** records only that the instance started. Who ran which command lives only in the bastion's own OS logs. Then compare it with **Session Manager** > **Session history**, which records every session, by IAM user, in CloudTrail.
+6. **Delete** the instance, the SG and the key pair. Screenshot each step for the comparison doc.
+
+We deliberately do **not** open port 22 from the bastion to the web server: that would break the "no SSH anywhere" rule the rest of the project is built and tested on (Week 4 alarms on any internal port 22 flow).
+
+### Check it worked
+The comparison table is filled in, the lab screenshots are taken (or a one-line note saying the team skipped the optional lab), and the bastion resources are deleted (EC2 > Instances shows none).

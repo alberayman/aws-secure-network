@@ -5,6 +5,12 @@ alert_email = "team-lead@example.com"
 enable_nat       = true
 enable_hybrid    = false # Week 2
 enable_vpn       = false # Week 2 (after hybrid works)
+
+# Week 2 lab: Client VPN (import the certificates first, Guide 2.7)
+enable_client_vpn          = false
+client_vpn_server_cert_arn = ""
+client_vpn_client_ca_arn   = ""
+
 enable_edge      = false # Week 3
 enable_ir        = false # Week 4
 isolate_victim   = false # Week 4 containment drill

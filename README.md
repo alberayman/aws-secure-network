@@ -14,7 +14,8 @@ Users ── HTTPS ──► CloudFront + WAF ──► S3 (private, OAC)
                         ├── peering ── Spoke A 10.1.0.0/16
                         └── Transit Gateway ── Spoke B 10.2.0.0/16 (PrivateLink service)
                                          └── IPsec VPN ── Office 192.168.0.0/16 (strongSwan)
-Monitoring: CloudTrail · VPC Flow Logs → S3 → Athena · WAF logs → CloudWatch alarm → SNS · Traffic Mirroring
+Remote users: Client VPN (mutual TLS) ── hub only
+Monitoring: CloudTrail · VPC Flow Logs → S3 → Athena + → CloudWatch alarms (scan, SSH) → SNS · WAF logs · Traffic Mirroring
 ```
 
 ## Team
@@ -68,14 +69,15 @@ terraform output
 
 | Switch in `terraform.tfvars` | Week | What it builds |
 |---|---|---|
-| *(always)* | 1 | VPC, EC2, ALB, RDS, CloudTrail, log bucket, Athena workgroup, budget |
+| *(always)* | 1 | VPC, EC2, ALB, RDS, CloudTrail, log bucket, Athena, CloudWatch network alarms, budget |
 | `enable_nat` | 1+ | NAT gateway |
 | `enable_hybrid` | 2 | spokes, peering, TGW, SSM endpoints, PrivateLink, spoke tests, Flow Logs on spokes |
 | `enable_vpn` | 2 | simulated office + Site-to-Site VPN |
+| `enable_client_vpn` | 2 (lab) | Client VPN endpoint, mutual-TLS certificates (Guide 2.7) |
 | `enable_edge` | 3 | CloudFront, S3 site, WAF, Route 53, WAF logs + alarm |
 | `enable_ir`, `isolate_victim`, `enable_mirroring` | 4 | victim, quarantine drill, Traffic Mirroring |
 
-End every session with **`make sleep`** (turns off NAT, hybrid, VPN and mirroring). Final day: `terraform destroy`.
+End every session with **`make sleep`** (turns off NAT, hybrid, VPN, Client VPN and mirroring). Final day: `terraform destroy`.
 
 ## Deliverables (booklet Project 2)
 

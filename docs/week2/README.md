@@ -11,6 +11,7 @@ Guide: [`docs/guides/`](../guides/) · Evidence: [`docs/evidence/week2/`](../evi
 | VPN configuration (no secrets) | 3 | Not started | |
 | Route table documentation | 1 | Not started | |
 | Hybrid connectivity test report | 2 | Not started | |
+| Client VPN lab + Direct Connect design (booklet task) | 3, 4 | Not started | |
 
 ## What we built
 

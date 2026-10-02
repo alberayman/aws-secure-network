@@ -22,3 +22,8 @@ output "athena_database" {
   description = "Athena database holding vpc_flow_logs"
   value       = aws_athena_database.this.name
 }
+
+output "network_alerts_topic_arn" {
+  description = "SNS topic for network alarms (eu-west-1)"
+  value       = aws_sns_topic.network_alerts.arn
+}

@@ -26,7 +26,7 @@ apply:     ## apply the saved plan
 output:    ## print URLs, IDs and IPs
 	$(TF) -chdir=$(DIR) output
 
-sleep:     ## end of session: switch off NAT, hybrid, VPN and mirroring (keeps Week 1 + edge)
+sleep:     ## end of session: switch off NAT, hybrid, VPN, Client VPN and mirroring (keeps Week 1 + edge)
 	bash scripts/sleep.sh
 
 destroy:   ## final day only: destroy everything

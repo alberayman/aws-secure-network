@@ -12,6 +12,7 @@ Guide: [`docs/guides/`](../guides/) · Evidence: [`docs/evidence/week1/`](../evi
 | SG / NACL rules matrix | 4 | Not started | |
 | Architecture diagram | 1 | Not started | |
 | Connectivity test results | 2 | Not started | |
+| Bastion vs SSM comparison (extra, answers "bastion/SSM access") | 4, 2 | Not started | |
 
 ## What we built
 

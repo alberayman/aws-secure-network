@@ -53,8 +53,15 @@ module "connectivity" {
 
 # ---------------- Weeks 1, 2, 4: logging and detection (Member 5) ----------------
 module "monitoring" {
-  source = "../../modules/monitoring"
-  name   = var.name
+  source                 = "../../modules/monitoring"
+  name                   = var.name
+  alert_email            = var.alert_email
+  reject_alarm_threshold = var.reject_alarm_threshold
+  # 1-minute copy in CloudWatch for alarms (Week 4). Spoke A is where the drill's scan is REJECTed.
+  cloudwatch_flowlog_vpc_ids = merge(
+    { hub = module.vpc.vpc_id },
+    local.hybrid ? { spoke_a = module.connectivity[0].spoke_vpc_ids["a"] } : {}
+  )
   vpc_ids = merge(
     { hub = module.vpc.vpc_id },
     local.hybrid ? {

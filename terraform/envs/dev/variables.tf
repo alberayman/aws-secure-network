@@ -69,3 +69,35 @@ variable "waf_blocked_countries" {
   type        = list(string)
   default     = ["KP"]
 }
+
+# ---------- Week 2 optional lab: Client VPN (remote users) ----------
+variable "enable_client_vpn" {
+  description = "Week 2 lab. AWS Client VPN endpoint into the hub (~$0.10/h + $0.05/h per connection)"
+  type        = bool
+  default     = false
+}
+
+variable "client_vpn_server_cert_arn" {
+  description = "ACM ARN of the imported Client VPN SERVER certificate (Guide 2.7)"
+  type        = string
+  default     = ""
+}
+
+variable "client_vpn_client_ca_arn" {
+  description = "ACM ARN of the imported CLIENT certificate / CA used for mutual TLS (Guide 2.7)"
+  type        = string
+  default     = ""
+}
+
+variable "client_vpn_cidr" {
+  description = "Addresses handed to VPN users. Must not overlap any VPC or the office (min /22)"
+  type        = string
+  default     = "172.16.0.0/22"
+}
+
+# ---------- Week 4: CloudWatch network detection ----------
+variable "reject_alarm_threshold" {
+  description = "Rejected flows in 5 minutes (hub VPC) before the network alarm fires"
+  type        = number
+  default     = 25
+}

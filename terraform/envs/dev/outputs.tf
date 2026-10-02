@@ -72,3 +72,13 @@ output "victim_private_ip" {
   description = "Week 4: use it in the Athena timeline query"
   value       = try(aws_instance.victim[0].private_ip, null)
 }
+
+output "client_vpn_endpoint_id" {
+  description = "Week 2 lab: download the client configuration for this endpoint"
+  value       = try(aws_ec2_client_vpn_endpoint.this[0].id, null)
+}
+
+output "network_alerts_topic" {
+  description = "Week 4: SNS topic for network alarms (confirm the email subscription)"
+  value       = module.monitoring.network_alerts_topic_arn
+}

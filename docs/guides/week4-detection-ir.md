@@ -15,6 +15,7 @@
 | 4.2 Traffic Mirroring | 3 | `envs/dev/mirroring.tf` | `enable_mirroring` |
 | 4.3 Containment | 4 | `envs/dev/isolation.tf` | `isolate_victim` |
 | 4.4 Athena, detections, runbook, CloudTrail evidence | 5 | `modules/monitoring/athena.tf` | automatic |
+| 4.4b CloudWatch network detection (alarms, Logs Insights, dashboard) | 5 | `modules/monitoring/cloudwatch.tf` | automatic |
 | 4.5 Final report, presentation, cleanup | 6 | - | all off |
 
 **Drill order** (agree on a start time and write down every timestamp in UTC):
@@ -157,6 +158,46 @@ TBLPROPERTIES ('skip.header.line.count'='1');
 
 Scanning costs $5 per TB. Our logs are a few MB, so each query costs a fraction of a cent.
 
+**B2. CloudWatch near-real-time detection** (do the console version in Week 3 or early Week 4, Terraform keeps it on)
+
+Athena (above) is the cheap long-term search over S3. **CloudWatch** catches things within minutes: the hub's flows (and Spoke A's when `enable_hybrid` is on) also go to CloudWatch Logs with **1-minute** aggregation. Metric filters turn matching log lines into numbers, and alarms email the team.
+
+Console steps:
+1. **CloudWatch** > **Log groups** > Create `/secnet/flowlogs/hub`, retention 14 days.
+2. **IAM** > **Roles** > Create > *Custom trust policy* with principal `vpc-flow-logs.amazonaws.com`. Inline policy: `logs:CreateLogStream`, `logs:PutLogEvents`, `logs:DescribeLogStreams` on that log group only. Name it `secnet-flowlogs-to-cloudwatch`.
+3. **VPC** > hub VPC > **Flow logs** > Create: filter **All**, interval **1 minute**, destination **CloudWatch Logs**, the log group, the role. (The S3 flow log from 2.5 stays: one VPC can have both.)
+4. Log group > **Metric filters** > Create:
+   - **Rejected flows from internal hosts**: pattern `[version, account_id, interface_id, srcaddr = "10.*", dstaddr, srcport, dstport, protocol, packets, bytes, start, end, action = "REJECT", log_status]`, namespace `secnet/Network`, metric `RejectedFlows`, value `1`, default `0`.
+   - **Internal SSH attempts**: the same, but `dstport = 22` and `action` without a condition. Metric `SSHAttempts`.
+   - Why `srcaddr = "10.*"`: the internet scans our ALB and NAT public IPs all day, and counting that noise would make the alarm useless. We alarm on *our own* hosts behaving badly (lateral movement).
+5. **SNS** (eu-west-1) > topic `secnet-network-alerts` > email subscription > **confirm the email**.
+6. **Alarms** > Create: `RejectedFlows` Sum over 5 min **> 25** → SNS. `SSHAttempts` Sum over 5 min **> 0** → SNS.
+7. **Logs Insights** > query the log group and **Save** it as `secnet/top-rejected-sources`:
+```
+fields @timestamp, @message
+| parse @message "* * * * * * * * * * * * * *" as version, account, eni, src, dst, srcport, dstport, proto, packets, bytes, start, end, action, status
+| filter action = "REJECT"
+| stats count(*) as rejects by src, dst, dstport
+| sort rejects desc | limit 20
+```
+8. **Dashboards** > Create `secnet-network`: a line graph of both metrics + an alarm status widget.
+
+Terraform (`modules/monitoring/cloudwatch.tf`, driven by `cloudwatch_flowlog_vpc_ids` in `envs/dev/main.tf`):
+| Block | Console step |
+|---|---|
+| `aws_cloudwatch_log_group.flowlogs` | 1 |
+| `aws_iam_role.flowlogs` + `aws_iam_role_policy.flowlogs` (write to these groups only, trust scoped by `aws:SourceAccount`) | 2 |
+| `aws_flow_log.cloudwatch` (`max_aggregation_interval = 60`) | 3 |
+| `aws_cloudwatch_log_metric_filter.rejects` / `.ssh` | 4 |
+| `aws_sns_topic.network_alerts` + email subscription | 5 |
+| `aws_cloudwatch_metric_alarm.rejects` / `.ssh` (threshold = `reject_alarm_threshold`, default 25) | 6 |
+| `aws_cloudwatch_query_definition.top_rejects` / `.port_scan` | 7 |
+| `aws_cloudwatch_dashboard.network` | 8 |
+
+During the drill (4.1), expect: the **SSH alarm** within about 2 to 6 minutes of T0 (the victim's port 22 attempts appear in the hub log); the **rejected-flows alarm** from Spoke A's log (the scan is REJECTed by Spoke A's SG); then **OK** emails after containment. Write each alarm time into the incident timeline: "time to detect" is a key metric in the final report.
+
+Cost: CloudWatch Logs ingestion ≈ $0.57 per GB in eu-west-1. Our lab produces a few MB a day, so pennies.
+
 **C. Detection use cases** (`docs/week4/detection-use-cases.md`):
 
 | Use case | Signal | Query / source | Threshold | First response | MITRE ATT&CK |
@@ -166,6 +207,8 @@ Scanning costs $5 per TB. Our logs are a few MB, so each query costs a fraction 
 | Odd outbound | private host → unusual port | 13 | new destination | check the process, isolate | T1071 Application Layer Protocol |
 | Reject storm | high reject count from one IP | 10 | > 100 / 10 min | block in the NACL or WAF | - |
 | Web attack burst | WAF BlockedRequests | alarm (3.5) | > 5 / 5 min | review the sampled requests | T1190 Exploit Public-Facing Application |
+| Lateral SSH (real time) | internal port 22 flow | CloudWatch `SSHAttempts` alarm (B2) | > 0 / 5 min | isolate the source host | T1021.004 |
+| Internal scan (real time) | rejected flows from 10.x | CloudWatch `RejectedFlows` alarm (B2) | > 25 / 5 min | identify and isolate the source | T1046 |
 
 **D. CloudTrail evidence:** **CloudTrail** > **Event history**, filtered by *Resource name* = victim instance ID, then by *Event name* `ModifyInstanceAttribute` (SG swap), `PutRolePolicy` (Revoke active sessions adds an inline deny policy), `CreateSnapshot`. Download as CSV, then run `sha256sum` on it.
 **Log file validation proof:**

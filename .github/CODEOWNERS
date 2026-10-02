@@ -6,6 +6,7 @@
 /terraform/envs/dev/victim.tf      @member2
 /terraform/modules/connectivity/   @member3
 /terraform/envs/dev/mirroring.tf   @member3
+/terraform/envs/dev/client_vpn.tf  @member3
 /terraform/modules/edge/           @member4
 /terraform/envs/dev/endpoints.tf   @member4
 /terraform/envs/dev/privatelink.tf @member4

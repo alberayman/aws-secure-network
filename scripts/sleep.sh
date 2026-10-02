@@ -7,12 +7,13 @@ terraform plan -out sleep.tfplan \
   -var enable_nat=false \
   -var enable_hybrid=false \
   -var enable_vpn=false \
+  -var enable_client_vpn=false \
   -var enable_mirroring=false
 echo
 read -r -p "Apply this plan (only destroys expected)? [y/N] " ok
 if [[ "$ok" == "y" ]]; then
   terraform apply sleep.tfplan
-  echo "Sleeping: NAT, spokes, TGW, VPN and mirroring removed. Week 1 core, edge and IR hosts stay."
+  echo "Sleeping: NAT, spokes, TGW, VPN, Client VPN and mirroring removed. Week 1 core, edge and IR hosts stay."
 else
   echo "Nothing changed."
 fi

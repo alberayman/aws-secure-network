@@ -19,6 +19,7 @@ Peering is **not transitive**: Spoke A can never reach Spoke B or the office thr
 | 2.4 Test instances + test report | 2 | `envs/dev/spoke_tests.tf` | `enable_hybrid` |
 | 2.5 Flow Logs baseline | 5 | `modules/monitoring/flowlogs.tf` | automatic |
 | 2.6 Reviews, cost, docs | 6 | `Makefile`, `scripts/` | - |
+| 2.7 Client VPN lab (remote users) | 3 (with 4) | `envs/dev/client_vpn.tf` | `enable_client_vpn` |
 
 **Order:** first do everything in the console on Monday and Tuesday, then delete it. On Wednesday, set `enable_hybrid = true` and apply. On Thursday, set `enable_vpn = true`, apply, and configure strongSwan. The VPN takes the longest, so start it early.
 
@@ -124,7 +125,7 @@ Replace the three `<…>` values with the ones in the downloaded file (Tunnel 1)
 
 One tunnel UP is enough for the lab. Two DOWN tunnels are normal before the instance is configured.
 
-10. **Client VPN** and **Direct Connect**: designed, not built. Write `docs/week2/client-vpn-and-dx.md`, one section each. Cover what it is, when you would choose it, what it needs, the rough cost, and why we did not build it. Client VPN needs certificates in ACM and is billed per endpoint and per connection hour. Direct Connect needs a physical circuit from a partner.
+10. **Client VPN** is built as a short lab in **2.7** (same day, then switched off). **Direct Connect** is design only: write `docs/week2/direct-connect.md` covering what it is (a private fibre link from a partner location into AWS), when to choose it over VPN (steady high bandwidth, predictable latency), what it needs (a DX partner, a physical cross-connect, a virtual interface to a Direct Connect gateway or TGW), the rough cost (port-hours + data out) and why we did not build it (it needs a physical circuit). Add a 3-row table: Site-to-Site VPN vs Client VPN vs Direct Connect.
 
 **Delete before Terraform**, in this order:
 1. The VPN connection and the customer gateway
@@ -252,3 +253,84 @@ The flow log status is **Active** on every VPC, the `.log.gz` files arrive, and 
 2. Write the cost note in `docs/week2/README.md`: hours with `enable_hybrid`/`enable_vpn` on × the rates in Guide 0.6. Add a **Billing** > **Cost Explorer** screenshot (group by Service, last 7 days).
 3. Make sure `make sleep` works, and run it at the end of every session.
 4. Fill `docs/week2/README.md` with all five deliverables linked: hub-and-spoke/TGW diagram, peering + endpoint setup, VPN configuration (**no secrets**), route table documentation, test report.
+
+---
+
+## 2.7 Member 3 (with Member 4): Client VPN lab, remote access for one person
+
+Site-to-Site VPN joins a whole **network** (the office). **Client VPN** joins one **laptop**: a teammate working from home connects with the AWS VPN Client and reaches the hub's private IPs. Authentication is **mutual TLS**: the server and every client hold a certificate signed by our own CA.
+
+**Cost:** ≈ $0.10/h per subnet association + $0.05/h per connected user. Build it, test it, screenshot it, and switch it off the same day.
+
+### Step A: make the certificates (once, on one laptop, macOS or Linux)
+```bash
+git clone https://github.com/OpenVPN/easy-rsa.git && cd easy-rsa/easyrsa3
+./easyrsa init-pki
+./easyrsa --batch build-ca nopass                          # our private CA
+./easyrsa --batch --san=DNS:server build-server-full server nopass
+./easyrsa --batch build-client-full client1.secnet nopass
+mkdir -p ~/secnet-vpn-certs && cp pki/ca.crt pki/issued/server.crt pki/private/server.key \
+  pki/issued/client1.secnet.crt pki/private/client1.secnet.key ~/secnet-vpn-certs/
+```
+**Never commit these files.** The `.key` files are private keys; keep them outside the repo.
+
+Import them to **ACM in eu-west-1** (the CA is the chain for both):
+```bash
+cd ~/secnet-vpn-certs
+aws acm import-certificate --certificate fileb://server.crt --private-key fileb://server.key \
+  --certificate-chain fileb://ca.crt --region eu-west-1 --tags Key=Project,Value=secure-network      # → server ARN
+aws acm import-certificate --certificate fileb://client1.secnet.crt --private-key fileb://client1.secnet.key \
+  --certificate-chain fileb://ca.crt --region eu-west-1 --tags Key=Project,Value=secure-network      # → client ARN
+```
+(Console alternative: **Certificate Manager** > **Import** > paste the body, the private key and the chain.)
+
+### Step B: console steps
+1. **CloudWatch** > Log groups > Create `/secnet/client-vpn` (14 days) with a log stream `connections`.
+2. **EC2** > Security groups > Create `secnet-client-vpn-sg` in `secnet-vpc`. Remove the default outbound rule and add outbound *All traffic* to `10.0.0.0/16` only.
+3. **VPC** > **Client VPN endpoints** > Create:
+   - Client IPv4 CIDR `172.16.0.0/22`. It must not overlap any VPC or the office.
+   - Server certificate = the server ARN.
+   - Authentication: **mutual authentication**, client certificate = the client ARN.
+   - Connection logging ON, pointing at the log group and stream from step 1.
+   - Transport UDP. **Split tunnel ON**, so only AWS traffic uses the tunnel.
+   - VPC `secnet-vpc`, SG `secnet-client-vpn-sg`. Client login banner ON.
+4. Endpoint > **Target network associations** > Associate > hub **private subnet 1**. This takes about 5 to 10 minutes. The state goes from *Pending-associate* to **Available**.
+5. **Authorization rules** > Add `10.0.0.0/16`, *Allow access to all users*. **Do not** authorise the spokes or the office. That is least privilege: remote users reach the hub only.
+6. **Download client configuration**. Open the `.ovpn` file in a text editor and add, just before the last line:
+```
+<cert>
+(paste the whole content of client1.secnet.crt)
+</cert>
+<key>
+(paste the whole content of client1.secnet.key)
+</key>
+```
+7. Install the **AWS VPN Client** (aws.amazon.com/vpn/client-vpn-download), then go to **File** > **Manage profiles** > **Add profile** and pick the edited `.ovpn` file. Connect.
+
+### Terraform (`envs/dev/client_vpn.tf`)
+Do step A (certificates are created and imported by hand: private keys must never be in Terraform state). Then in `terraform.tfvars`:
+```hcl
+enable_client_vpn          = true
+client_vpn_server_cert_arn = "arn:aws:acm:eu-west-1:<ACCOUNT_ID>:certificate/<server-id>"
+client_vpn_client_ca_arn   = "arn:aws:acm:eu-west-1:<ACCOUNT_ID>:certificate/<client-id>"
+```
+| Block | Console step |
+|---|---|
+| `aws_cloudwatch_log_group.client_vpn` + `_log_stream` | 1 |
+| `aws_security_group.client_vpn` + egress to the hub only | 2 |
+| `aws_ec2_client_vpn_endpoint.this` (mutual TLS, split tunnel, logs, banner) | 3 |
+| `aws_ec2_client_vpn_network_association.hub` | 4 |
+| `aws_ec2_client_vpn_authorization_rule.hub` (10.0.0.0/16 only) | 5 |
+
+`terraform plan` → `apply`, then do steps 6 and 7 with `terraform output client_vpn_endpoint_id`.
+
+### Check it worked
+| Test (laptop connected) | Command | Expected | Why |
+|---|---|---|---|
+| Laptop → hub web host | `ping <web_private_ip>` | ✅ | authorised for 10.0.0.0/16 |
+| Laptop → hub web host HTTP | `curl -m 5 http://<web_private_ip>` | ❌ | web SG only accepts HTTP from the ALB SG: least privilege still applies |
+| Laptop → Spoke B | `ping 10.2.1.x` | ❌ | no authorization rule for 10.2.0.0/16 |
+| Laptop → internet | `curl https://example.com` | ✅ (not via AWS) | split tunnel |
+| Connection log | CloudWatch `/secnet/client-vpn` | your cert's common name, connect time, bytes | audit trail |
+
+Screenshots: endpoint *Available*, the client connected, the ping, the failed tests and the connection log. Then set `enable_client_vpn = false` and apply (or delete the endpoint in the console). Write it up in `docs/week2/client-vpn.md`, including when a company would choose Client VPN over a bastion, SSM or Site-to-Site VPN.

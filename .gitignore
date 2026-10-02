@@ -27,3 +27,6 @@ vpn-*.txt
 .DS_Store
 .vscode/
 .idea/
+*.ovpn
+*.crt
+pki/
