@@ -1,0 +1,29 @@
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+tf.plan
+crash.log
+crash.*.log
+terraform.tfvars
+*.auto.tfvars
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
+
+# Secrets
+*.pem
+*.key
+*.p12
+.env
+vpn-*.txt
+*vpn-config*
+
+# OS / editors
+.DS_Store
+.vscode/
+.idea/

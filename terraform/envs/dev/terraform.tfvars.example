@@ -1,0 +1,11 @@
+# Copy to terraform.tfvars (git-ignored) and edit.
+alert_email = "team-lead@example.com"
+
+# Week 1 is always on. Switch the rest on week by week:
+enable_nat       = true
+enable_hybrid    = false # Week 2
+enable_vpn       = false # Week 2 (after hybrid works)
+enable_edge      = false # Week 3
+enable_ir        = false # Week 4
+isolate_victim   = false # Week 4 containment drill
+enable_mirroring = false # Week 4

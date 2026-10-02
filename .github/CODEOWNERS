@@ -1,0 +1,18 @@
+# Replace @memberN with real GitHub usernames. A PR touching these paths requests that member's review.
+/terraform/modules/vpc/            @member1
+/terraform/envs/dev/dns.tf         @member1
+/terraform/modules/compute/        @member2
+/terraform/envs/dev/spoke_tests.tf @member2
+/terraform/envs/dev/victim.tf      @member2
+/terraform/modules/connectivity/   @member3
+/terraform/envs/dev/mirroring.tf   @member3
+/terraform/modules/edge/           @member4
+/terraform/envs/dev/endpoints.tf   @member4
+/terraform/envs/dev/privatelink.tf @member4
+/terraform/envs/dev/isolation.tf   @member4
+/terraform/modules/monitoring/     @member5
+/terraform/envs/dev/waf_monitoring.tf @member5
+/.github/                          @member6
+/terraform/envs/dev/versions.tf    @member6
+/terraform/envs/dev/budget.tf      @member6
+/docs/final-report.md              @member6
