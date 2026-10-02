@@ -13,7 +13,7 @@
 /terraform/envs/dev/isolation.tf   @member4
 /terraform/modules/monitoring/     @member5
 /terraform/envs/dev/waf_monitoring.tf @member5
-/.github/                          @member6
-/terraform/envs/dev/versions.tf    @member6
-/terraform/envs/dev/budget.tf      @member6
-/docs/final-report.md              @member6
+/.github/                          @alberayman
+/terraform/envs/dev/versions.tf    @alberayman
+/terraform/envs/dev/budget.tf      @alberayman
+/docs/final-report.md              @alberayman

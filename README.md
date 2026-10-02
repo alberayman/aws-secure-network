@@ -24,12 +24,12 @@ We are six students; each leads one workstream (details in [`docs/team-roles.md`
 
 | # | Name | GitHub | Workstream |
 |---|---|---|---|
-| 1 | | | Networking |
-| 2 | | | Servers and database |
-| 3 | | | Hybrid connectivity |
-| 4 | | | Edge and access security |
-| 5 | | | Logging and incident response |
-| 6 | | | Repo, CI and reporting |
+| 1 | Taghride Ahmed Gadelrab Abdelhafez |  | Networking |
+| 2 | Ahlam Reda Abdelmonim Ahmed |  | Servers and database |
+| 3 | Asmaa Salah Elsayed Abbas |  | Hybrid connectivity |
+| 4 | Mohamed AbdElMeged Hagag |  | Edge and access security |
+| 5 | Ahmed Abd El Haleem El Araby |  | Logging and incident response |
+| 6 | Alber Ayman Mokhtar Fouad | [@alberayman](https://github.com/alberayman) | Repo, CI and reporting |
 
 ## Start here
 
