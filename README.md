@@ -26,8 +26,8 @@ We are six students; each leads one workstream (details in [`docs/team-roles.md`
 |---|---|---|---|
 | 1 | Taghride Ahmed Gadelrab Abdelhafez |  | Networking |
 | 2 | Ahlam Reda Abdelmonim Ahmed |  | Servers and database |
-| 3 | Asmaa Salah Elsayed Abbas |  | Hybrid connectivity |
-| 4 | Mohamed AbdElMeged Hagag |  | Edge and access security |
+| 3 | Mohamed AbdElMeged Hagag |  | Hybrid connectivity |
+| 4 | Asmaa Salah Elsayed Abbas |  | Edge and access security |
 | 5 | Ahmed Abd El Haleem El Araby |  | Logging and incident response |
 | 6 | Alber Ayman Mokhtar Fouad | [@alberayman](https://github.com/alberayman) | Repo, CI and reporting |
 
