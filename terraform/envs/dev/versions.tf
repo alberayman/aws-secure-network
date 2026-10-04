@@ -9,13 +9,13 @@ terraform {
   }
 
   # Step 0.4 in Guide 0: create the state bucket by hand, then uncomment and run `terraform init`.
-  # backend "s3" {
-  #   bucket       = "secnet-tfstate-<ACCOUNT_ID>"
-  #   key          = "secure-network/dev.tfstate"
-  #   region       = "eu-west-1"
-  #   encrypt      = true
-  #   use_lockfile = true
-  # }
+  backend "s3" {
+    bucket       = "secnet-tfstate-871925762150"
+    key          = "secure-network/dev.tfstate"
+    region       = "eu-west-1"
+    encrypt      = true
+    use_lockfile = true
+  }
 }
 
 provider "aws" {
