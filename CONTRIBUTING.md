@@ -6,6 +6,6 @@
 4. Before pushing: `terraform fmt -recursive terraform` and `terraform -chdir=terraform/envs/dev validate` (or `make check`).
 5. Open a pull request with the template, paste the `plan` summary (no secrets), get one teammate's approval, wait for green CI, **Squash and merge**.
 6. Only one person runs `apply` at a time – announce it in the team chat.
-7. Evidence goes in `docs/evidence/week<N>/`. Blur account IDs, keys and public IPs in screenshots you publish.
+7. Evidence goes in `docs/evidence/week<N>/`. Blur access key IDs, secret keys, VPN PSKs and public IPs in screenshots you publish (the account ID may stay visible).
 8. Never commit: `*.tfstate`, `terraform.tfvars`, AWS keys, `.pem` files, the downloaded VPN configuration.
 9. End of session: `make sleep` and note it in the team chat.

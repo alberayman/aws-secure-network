@@ -1,14 +1,14 @@
 # Evidence checklist – Project 2 (complete set, could be submitted alone)
 
 Tick each box when the evidence file exists **and** the result is written in the week README.
-File names: `w<week>-<task>-<what>.png` in `docs/evidence/week<N>/`. Blur the account ID and public IPs.
+File names: `w<week>-<task>-<what>.png` in `docs/evidence/week<N>/`. Blur access key IDs (even partial), secret keys, VPN PSKs, public IPs and Client VPN configs; the account ID may stay visible (decision 2026-10-05, see change log).
 For every task keep **one console screenshot + one Terraform proof** (plan summary, apply complete, `terraform output`).
 
 ## Guide 0 – Foundations (day 1)
 - [ ] `w0-0.1-root-mfa.png` – root MFA assigned
 - [ ] `w0-0.1-iam-users-mfa.png` – team users in `project-team`, MFA on
 - [ ] `w0-0.2-budget.png` – `secnet-monthly` with 4 alerts
-- [ ] `w0-0.3-sts-identity.txt` – `aws sts get-caller-identity` (blur the account ID)
+- [ ] `w0-0.3-sts-identity.txt` – `aws sts get-caller-identity` (blur the access key ID if it shows)
 - [ ] `w0-0.4-state-bucket.png` – versioning + Block Public Access ON
 - [ ] `w0-0.7-branch-protection.png` – `main` protected, secret scanning ON
 

@@ -167,7 +167,7 @@ Console steps:
 2. **IAM** > **Roles** > Create > *Custom trust policy* with principal `vpc-flow-logs.amazonaws.com`. Inline policy: `logs:CreateLogStream`, `logs:PutLogEvents`, `logs:DescribeLogStreams` on that log group only. Name it `secnet-flowlogs-to-cloudwatch`.
 3. **VPC** > hub VPC > **Flow logs** > Create: filter **All**, interval **1 minute**, destination **CloudWatch Logs**, the log group, the role. (The S3 flow log from 2.5 stays: one VPC can have both.)
 4. Log group > **Metric filters** > Create:
-   - **Rejected flows from internal hosts**: pattern `[version, account_id, interface_id, srcaddr = "10.*", dstaddr, srcport, dstport, protocol, packets, bytes, start, end, action = "REJECT", log_status]`, namespace `secnet/Network`, metric `RejectedFlows`, value `1`, default `0`.
+   - **Rejected flows from internal hosts**: pattern `[version, account_id, interface_id, srcaddr = "10.*", dstaddr, srcport, dstport, protocol, packets, bytes, start, end, action = "REJECT", log_status]`, namespace `secnet/Network/hub` (one namespace per VPC; no dimensions), metric `RejectedFlows`, value `1`, default `0`.
    - **Internal SSH attempts**: the same, but `dstport = 22` and `action` without a condition. Metric `SSHAttempts`.
    - Why `srcaddr = "10.*"`: the internet scans our ALB and NAT public IPs all day, and counting that noise would make the alarm useless. We alarm on *our own* hosts behaving badly (lateral movement).
 5. **SNS** (eu-west-1) > topic `secnet-network-alerts` > email subscription > **confirm the email**.
