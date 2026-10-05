@@ -74,18 +74,47 @@ in one sentence you can say out loud, the command, what you should see, and the 
 
 ---
 
-## Live demo shortlist (about 10 minutes)
+## Live demo on a running stack (presentation day)
 
-Run these live; show the screenshots for everything else. Order tells the story: front door → walls →
-connections → edge → incident.
+The presentation includes a **live demo on the real, running environment**. Screenshots are only the backup.
+
+### Shortlist (about 10 minutes, in story order: front door → walls → connections → edge → incident)
 
 1. **T1** website via ALB → 2. **T2** database has no public path → 3. **T4 + T5** SSM shell and the allowed DB path →
 4. **T16** peering not transitive → 5. **T18** office segmented from Spoke B → 6. **T21** PrivateLink →
 7. **T29 / T30** SQLi and XSS get 403 → 8. **T39** contain the victim, website still up → 9. **T11** `terraform plan` = No changes.
 
-## Before the presentation
+### Timeline
 
-- Rebuild the day before at the latest (CLAUDE.md freeze: no infrastructure changes in the last 24 h except re-creating the demo).
-- Switches needed for the shortlist: `enable_nat`, `enable_hybrid`, `enable_vpn`, `enable_edge`, `enable_ir`. Run every shortlist test once after the rebuild and note the new IDs/URLs.
-- Keep the screenshots open in a second window as the **backup** for any live test that fails (a live VPN or WAF test can be slow).
-- After the presentation: `make sleep`, then the final-day destroy (Tier 3, recorded in `change-log.md`).
+| When | What | Why |
+|---|---|---|
+| D-3 | Full rebuild with every demo switch on (`enable_nat`, `enable_hybrid`, `enable_vpn`, `enable_edge`, `enable_ir`), run the whole shortlist once, fix anything broken | Week 2–4 tests have never run together; leaves time to fix |
+| D-2 | Rehearse the demo with a timer; refresh any failing screenshot | Live demos take 2–3× longer than expected |
+| D-1 (before the 24 h freeze) | Final rebuild + full shortlist run; **no code changes after this** | CLAUDE.md freeze: only re-creating the demo is allowed in the last 24 h |
+| D-0, 1 h before | Smoke test T1, T4, T17 (VPN tunnel UP), T28; load the demo variables; open backup screenshots in a second window | Catches overnight surprises (expired session, tunnel down) |
+| D-0, after | `make sleep`, then the final-day destroy (Tier 3, logged) | Cost |
+
+### Slow things to start early (they cannot be rushed during the demo)
+
+- RDS: about 6–10 min to create. VPN tunnel: about 5–10 min to come UP. CloudFront distribution: about 5–15 min to deploy.
+- SNS email subscriptions must be **re-confirmed after every rebuild**, or T33/T36 alarms will not email.
+- AWS console and CLI sessions expire: sign in fresh, run `aws sts get-caller-identity` (profile `secnet`).
+
+### Demo variables (IDs change on every rebuild, never type them by hand)
+
+```bash
+cd terraform/envs/dev
+export ALB=$(terraform output -raw alb_url)
+export DB=$(terraform output -raw db_endpoint)
+export WEB=$(terraform output -raw web_instance_id)
+export WEBIP=$(terraform output -raw web_private_ip)
+export PL=$(terraform output -raw privatelink_dns)
+echo "$ALB $DB $WEB $WEBIP $PL"
+```
+
+### Live-demo rules
+
+- Never `apply` anything during the demo except the planned T39 containment (`isolate_victim`), with its plan reviewed beforehand.
+- If a live test hangs for more than 30 seconds, say what it should show and switch to the screenshot.
+- Do not show secrets on screen: no `terraform output` of the VPN PSK, no Secrets Manager value, no `~/.aws`.
+- Cost of the full demo stack is roughly $0.5–1/hour (NAT, ALB, RDS, TGW, VPN, endpoints, WAF); keep the D-3 → D-0 window as short as possible.
