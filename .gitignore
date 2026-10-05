@@ -6,6 +6,8 @@
 tf.plan
 plan.txt
 apply*.txt
+destroy.plan
+destroy*.txt
 crash.log
 crash.*.log
 terraform.tfvars
