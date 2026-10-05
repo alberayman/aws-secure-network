@@ -64,12 +64,13 @@ resource "aws_cloudwatch_log_metric_filter" "rejects" {
   name           = "${var.name}-${each.key}-rejected-flows"
   log_group_name = aws_cloudwatch_log_group.flowlogs[each.key].name
   pattern        = "[version, account_id, interface_id, srcaddr = \"10.*\", dstaddr, srcport, dstport, protocol, packets, bytes, start, end, action = \"REJECT\", log_status]"
+  # One namespace per VPC instead of a dimension: metric-filter dimensions must be fields taken
+  # from the log line (e.g. $srcaddr), not fixed text, and cannot be combined with default_value.
   metric_transformation {
     name          = "RejectedFlows"
-    namespace     = "${var.name}/Network"
+    namespace     = "${var.name}/Network/${each.key}"
     value         = "1"
     default_value = "0"
-    dimensions    = { VPC = each.key }
   }
 }
 
@@ -78,12 +79,13 @@ resource "aws_cloudwatch_log_metric_filter" "ssh" {
   name           = "${var.name}-${each.key}-ssh-attempts"
   log_group_name = aws_cloudwatch_log_group.flowlogs[each.key].name
   pattern        = "[version, account_id, interface_id, srcaddr = \"10.*\", dstaddr, srcport, dstport = 22, protocol, packets, bytes, start, end, action, log_status]"
+  # One namespace per VPC instead of a dimension: metric-filter dimensions must be fields taken
+  # from the log line (e.g. $srcaddr), not fixed text, and cannot be combined with default_value.
   metric_transformation {
     name          = "SSHAttempts"
-    namespace     = "${var.name}/Network"
+    namespace     = "${var.name}/Network/${each.key}"
     value         = "1"
     default_value = "0"
-    dimensions    = { VPC = each.key }
   }
 }
 
@@ -102,9 +104,8 @@ resource "aws_cloudwatch_metric_alarm" "rejects" {
   for_each            = var.cloudwatch_flowlog_vpc_ids
   alarm_name          = "${var.name}-${each.key}-rejected-flows-spike"
   alarm_description   = "Possible internal scan: more than ${var.reject_alarm_threshold} rejected flows from 10.x sources in 5 minutes in ${each.key}"
-  namespace           = "${var.name}/Network"
+  namespace           = "${var.name}/Network/${each.key}"
   metric_name         = "RejectedFlows"
-  dimensions          = { VPC = each.key }
   statistic           = "Sum"
   period              = 300
   evaluation_periods  = 1
@@ -119,9 +120,8 @@ resource "aws_cloudwatch_metric_alarm" "ssh" {
   for_each            = var.cloudwatch_flowlog_vpc_ids
   alarm_name          = "${var.name}-${each.key}-ssh-attempt"
   alarm_description   = "Internal host tried SSH (port 22): SSH does not exist in this design"
-  namespace           = "${var.name}/Network"
+  namespace           = "${var.name}/Network/${each.key}"
   metric_name         = "SSHAttempts"
-  dimensions          = { VPC = each.key }
   statistic           = "Sum"
   period              = 300
   evaluation_periods  = 1
@@ -175,8 +175,8 @@ resource "aws_cloudwatch_dashboard" "network" {
           period = 300
           view   = "timeSeries"
           metrics = concat(
-            [for k, _ in var.cloudwatch_flowlog_vpc_ids : ["${var.name}/Network", "RejectedFlows", "VPC", k]],
-            [for k, _ in var.cloudwatch_flowlog_vpc_ids : ["${var.name}/Network", "SSHAttempts", "VPC", k]]
+            [for k, _ in var.cloudwatch_flowlog_vpc_ids : ["${var.name}/Network/${k}", "RejectedFlows"]],
+            [for k, _ in var.cloudwatch_flowlog_vpc_ids : ["${var.name}/Network/${k}", "SSHAttempts"]]
           )
         }
       },
