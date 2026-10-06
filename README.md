@@ -6,6 +6,12 @@
 A production-style AWS network built as code: a private three-tier app, hub-and-spoke connectivity with a
 Site-to-Site VPN to a simulated office, a WAF-protected CloudFront edge, and a full incident-response drill.
 
+![Architecture: hub VPC with ALB, EC2 and RDS; spokes via peering and Transit Gateway; office via Site-to-Site VPN; CloudFront + WAF edge; monitoring with CloudTrail, Flow Logs, Athena and CloudWatch](docs/architecture/architecture.png)
+
+<sub>Diagram as code: [`docs/architecture/architecture.py`](docs/architecture/architecture.py) (Python `diagrams` + Graphviz, official AWS icons).</sub>
+
+<details><summary>Text version</summary>
+
 ```
 Users ── HTTPS ──► CloudFront + WAF ──► S3 (private, OAC)
   │
@@ -17,6 +23,8 @@ Users ── HTTPS ──► CloudFront + WAF ──► S3 (private, OAC)
 Remote users: Client VPN (mutual TLS) ── hub only
 Monitoring: CloudTrail · VPC Flow Logs → S3 → Athena + → CloudWatch alarms (scan, SSH) → SNS · WAF logs · Traffic Mirroring
 ```
+
+</details>
 
 ## Team
 
