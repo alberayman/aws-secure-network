@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   terraform:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # pinned: ubuntu-latest moves to 26.04 from 19 Oct 2026
     steps:
       - uses: actions/checkout@v4
       - uses: hashicorp/setup-terraform@v3
@@ -24,12 +24,16 @@ jobs:
           terraform -chdir=terraform/envs/dev validate
       - uses: terraform-linters/setup-tflint@v4
       - name: TFLint
+        env:
+          # tflint --init downloads the AWS ruleset from the GitHub API; without a token the shared
+          # runner IPs hit the 60 requests/hour limit (403 rate limit exceeded).
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           tflint --init
           tflint --recursive --chdir=terraform
 
   security-scan:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # pinned: ubuntu-latest moves to 26.04 from 19 Oct 2026
     steps:
       - uses: actions/checkout@v4
       - name: Checkov
