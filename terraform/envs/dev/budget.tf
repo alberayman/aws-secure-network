@@ -6,6 +6,13 @@ resource "aws_budgets_budget" "monthly" {
   limit_unit   = "USD"
   time_unit    = "MONTHLY"
 
+  # Track gross usage: with the defaults, promotional credits and refunds are netted out, so
+  # actual cost shows $0 and the alerts never fire while credits last (found 2026-10-11).
+  cost_types {
+    include_credit = false
+    include_refund = false
+  }
+
   dynamic "notification" {
     for_each = [25, 50, 80]
     content {

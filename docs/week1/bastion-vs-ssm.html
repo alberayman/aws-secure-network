@@ -1,0 +1,75 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{width:1600px;font-family:Helvetica,Arial,sans-serif;background:#fff;color:#1f2933;padding:48px 56px}
+h1{font-size:40px;color:#232f3e}
+.sub{font-size:20px;color:#52606d;margin:8px 0 32px}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:32px}
+.card{border-radius:18px;padding:28px 30px;border:3px solid}
+.bad{border-color:#d13212;background:#fdf3f1}
+.good{border-color:#1d8102;background:#f2f8f0}
+.card h2{font-size:28px;margin-bottom:6px}
+.bad h2{color:#b42a0f}.good h2{color:#16670a}
+.tag{display:inline-block;font-size:15px;font-weight:bold;padding:4px 12px;border-radius:20px;color:#fff;margin-bottom:18px}
+.bad .tag{background:#d13212}.good .tag{background:#1d8102}
+.flow{display:flex;align-items:center;gap:10px;margin:8px 0 22px;flex-wrap:nowrap}
+.node{background:#fff;border:2px solid #9aa5b1;border-radius:10px;padding:10px 12px;font-size:16px;text-align:center;min-width:112px;line-height:1.25}
+.node b{display:block;font-size:17px}
+.arrow{font-size:15px;text-align:center;line-height:1.1;color:#3e4c59}
+.arrow .a{font-size:28px;display:block}
+.open{color:#d13212;font-weight:bold}.closed{color:#1d8102;font-weight:bold}
+ul{list-style:none}
+li{font-size:19px;padding:9px 0;border-top:1px solid rgba(0,0,0,.08);display:flex;gap:12px}li b{margin-right:0}
+li span.i{font-weight:bold;width:24px;flex:none}
+.bad li span.i{color:#d13212}.good li span.i{color:#1d8102}
+.evidence{margin-top:32px;border-radius:18px;background:#232f3e;color:#fff;padding:26px 30px}
+.evidence h3{font-size:24px;margin-bottom:14px;color:#ff9900}
+.ev{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
+.ev div{background:rgba(255,255,255,.08);border-radius:12px;padding:16px;font-size:17px;line-height:1.35}
+.ev b{display:block;font-size:22px;color:#ff9900;margin-bottom:4px}
+.foot{margin-top:20px;font-size:15px;color:#7b8794}
+</style></head><body>
+<h1>Admin access to private servers: Bastion host vs SSM Session Manager</h1>
+<div class="sub">DEPI ONL5_ISS11_G1 · Secure AWS Network · Week 1 decision: <b>Session Manager, no SSH anywhere</b></div>
+<div class="cols">
+ <div class="card bad"><h2>Bastion host (jump box)</h2><span class="tag">Legacy pattern – not used</span>
+  <div class="flow">
+   <div class="node"><b>Admin</b>laptop + .pem key</div>
+   <div class="arrow"><span class="a">→</span><span class="open">SSH 22</span><br>from internet</div>
+   <div class="node"><b>Bastion</b>public subnet<br>public IP</div>
+   <div class="arrow"><span class="a">→</span><span class="open">SSH 22</span><br>inside VPC</div>
+   <div class="node"><b>Web server</b>private subnet</div>
+  </div>
+  <ul>
+   <li><span class="i">✗</span>Port 22 open to the internet on the bastion</li>
+   <li><span class="i">✗</span>Needs a public IP</li>
+   <li><span class="i">✗</span>SSH keys to create, share, rotate and revoke</li>
+   <li><span class="i">✗</span>Who ran what lives only in the bastion's OS logs</li>
+   <li><span class="i">✗</span>One more EC2 to patch, running 24/7</li>
+   <li><span class="i">✗</span>A stolen key opens lateral movement</li>
+  </ul></div>
+ <div class="card good"><h2>SSM Session Manager</h2><span class="tag">Our choice ✓</span>
+  <div class="flow">
+   <div class="node"><b>Admin</b>IAM user + MFA</div>
+   <div class="arrow"><span class="a">→</span>HTTPS<br>AWS API</div>
+   <div class="node"><b>Systems Manager</b>AWS service</div>
+   <div class="arrow"><span class="a">←</span><span class="closed">outbound 443</span><br>via NAT</div>
+   <div class="node"><b>Web server</b>SSM agent<br>no public IP</div>
+  </div>
+  <ul>
+   <li><span class="i">✓</span><b>Zero</b>&nbsp;inbound ports – nothing listens for admins</li>
+   <li><span class="i">✓</span>No public IP, no key pair on the server</li>
+   <li><span class="i">✓</span>Access = IAM policy + MFA we already have</li>
+   <li><span class="i">✓</span>Every session in CloudTrail by IAM user</li>
+   <li><span class="i">✓</span>No extra server, no extra charge</li>
+   <li><span class="i">!</span>Trade-off: IAM becomes the gate; transcripts not stored yet</li>
+  </ul></div>
+</div>
+<div class="evidence"><h3>Proved on our build – 11 Oct 2026</h3>
+ <div class="ev">
+  <div><b>None</b>public IP on secnet-web (T3)</div>
+  <div><b>Not reachable</b>internet → web on TCP 22 – Reachability Analyzer found 3 blockers: no public IP · NACL · security group (T7)</div>
+  <div><b>Shell works</b>Session Manager on the private server, no key, no port 22 (T4)</div>
+  <div><b>Audited</b>every change recorded in CloudTrail under user secnet-lab (T10)</div>
+ </div></div>
+<div class="foot">Third option considered: EC2 Instance Connect Endpoint – no public IP, IAM-based, but still SSH on port 22 from the endpoint. Details: docs/week1/bastion-vs-ssm.md</div>
+</body></html>
