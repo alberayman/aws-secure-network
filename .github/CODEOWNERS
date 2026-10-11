@@ -1,18 +1,18 @@
-# Replace the remaining @memberN with real GitHub usernames (placeholders are ignored by GitHub). A PR touching these paths requests that member's review.
-# @member1 = Taghride Ahmed Gadelrab Abdelhafez | @member2 = Ahlam Reda Abdelmonim Ahmed | @m7ag2g = Mohamed AbdElMeged Hagag
-# @member4 = Asmaa Salah Elsayed Abbas | @AhmedelAraby0 = Ahmed Abd El Haleem El Araby | @alberayman = Alber Ayman Mokhtar Fouad
-/terraform/modules/vpc/            @member1
-/terraform/envs/dev/dns.tf         @member1
-/terraform/modules/compute/        @member2
-/terraform/envs/dev/spoke_tests.tf @member2
-/terraform/envs/dev/victim.tf      @member2
+# A PR touching these paths requests that member's review.
+# @TaghrideAhmed = Taghride Ahmed Gadelrab Abdelhafez | @ahlam-reda = Ahlam Reda Abdelmonim Ahmed | @m7ag2g = Mohamed AbdElMeged Hagag
+# @asmaa588 = Asmaa Salah Elsayed Abbas | @AhmedelAraby0 = Ahmed Abd El Haleem El Araby | @alberayman = Alber Ayman Mokhtar Fouad
+/terraform/modules/vpc/            @TaghrideAhmed
+/terraform/envs/dev/dns.tf         @TaghrideAhmed
+/terraform/modules/compute/        @ahlam-reda
+/terraform/envs/dev/spoke_tests.tf @ahlam-reda
+/terraform/envs/dev/victim.tf      @ahlam-reda
 /terraform/modules/connectivity/   @m7ag2g
 /terraform/envs/dev/mirroring.tf   @m7ag2g
 /terraform/envs/dev/client_vpn.tf  @m7ag2g
-/terraform/modules/edge/           @member4
-/terraform/envs/dev/endpoints.tf   @member4
-/terraform/envs/dev/privatelink.tf @member4
-/terraform/envs/dev/isolation.tf   @member4
+/terraform/modules/edge/           @asmaa588
+/terraform/envs/dev/endpoints.tf   @asmaa588
+/terraform/envs/dev/privatelink.tf @asmaa588
+/terraform/envs/dev/isolation.tf   @asmaa588
 /terraform/modules/monitoring/     @AhmedelAraby0
 /terraform/envs/dev/waf_monitoring.tf @AhmedelAraby0
 /.github/                          @alberayman
