@@ -8,14 +8,14 @@ Every task in Guides 1 to 4 is done twice:
 
 Who does what: we are six students, no job titles. Each member leads one workstream (see `docs/team-roles.md`):
 
-| Member | Name | Workstream |
-|---|---|---|
-| 1 | Taghride Ahmed Gadelrab Abdelhafez | Networking |
-| 2 | Ahlam Reda Abdelmonim Ahmed | Servers and database |
-| 3 | Mohamed AbdElMeged Hagag | Hybrid connectivity |
-| 4 | Asmaa Salah Elsayed Abbas | Edge and access security |
-| 5 | Ahmed Abd El Haleem El Araby | Logging and incident response |
-| 6 | Alber Ayman Mokhtar Fouad | Repo, CI and reporting |
+| Member | Name | GitHub | Workstream |
+|---|---|---|---|
+| 1 | Taghride Ahmed Gadelrab Abdelhafez | [@TaghrideAhmed](https://github.com/TaghrideAhmed) | Networking |
+| 2 | Ahlam Reda Abdelmonim Ahmed | [@ahlam-reda](https://github.com/ahlam-reda) | Servers and database |
+| 3 | Mohamed AbdElMeged Hagag | [@m7ag2g](https://github.com/m7ag2g) | Hybrid connectivity |
+| 4 | Asmaa Salah Elsayed Abbas | [@asmaa588](https://github.com/asmaa588) | Edge and access security |
+| 5 | Ahmed Abd El Haleem El Araby | [@AhmedelAraby0](https://github.com/AhmedelAraby0) | Logging and incident response |
+| 6 | Alber Ayman Mokhtar Fouad | [@alberayman](https://github.com/alberayman) | Repo, CI and reporting |
 
 ---
 
