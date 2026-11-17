@@ -8,7 +8,11 @@ Site-to-Site VPN to a simulated office, a WAF-protected CloudFront edge, and a f
 
 ![Architecture: hub VPC with ALB, EC2 and RDS; spokes via peering and Transit Gateway; office via Site-to-Site VPN; CloudFront + WAF edge; monitoring with CloudTrail, Flow Logs, Athena and CloudWatch](docs/architecture/architecture.png)
 
-<sub>Diagram as code: [`docs/architecture/architecture.py`](docs/architecture/architecture.py) (Python `diagrams` + Graphviz, official AWS icons).</sub>
+**How the traffic flows** (10 numbered flows and the paths blocked on purpose):
+
+![Traffic flows: public website, web application, admin access, hub to spokes, office VPN, remote employee, PrivateLink, outbound updates, audit and detection](docs/architecture/traffic-flows.png)
+
+<sub>Both diagrams are code: [`docs/architecture/`](docs/architecture/README.md) (hand-laid SVG, official AWS icons and group colours).</sub>
 
 <details><summary>Text version</summary>
 

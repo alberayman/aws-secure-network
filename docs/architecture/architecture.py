@@ -1,117 +1,133 @@
-"""Architecture diagram for the README (diagram as code).
-
-Regenerate:  pip install diagrams  (needs graphviz)  ->  python3 architecture.py
-Output: architecture.png next to this file.
+"""Architecture diagram v2 (hand-laid SVG, AWS Architecture Icons + group colours).
+Run: python3 architecture.py && python3 render.py architecture
 """
-from diagrams import Cluster, Diagram, Edge
-from diagrams.aws.analytics import Athena
-from diagrams.aws.compute import EC2
-from diagrams.aws.database import RDS
-from diagrams.aws.general import Client, Users, GenericOfficeBuilding
-from diagrams.aws.integration import SNS
-from diagrams.aws.management import Cloudtrail, Cloudwatch, SystemsManager
-from diagrams.aws.network import (ALB, NLB, CloudFront, ClientVpn, Endpoint, InternetGateway,
-                                  NATGateway, Privatelink, Route53HostedZone, SiteToSiteVpn,
-                                  TransitGateway, VPCFlowLogs, VPCPeering)
-from diagrams.aws.security import SecretsManager, WAF
-from diagrams.aws.storage import S3
+from svgkit import Svg, INK
 
-graph = {"fontsize": "22", "fontname": "Helvetica-Bold", "pad": "0.6", "nodesep": "0.55",
-         "ranksep": "1.0", "splines": "spline", "labelloc": "t"}
-node = {"fontsize": "12", "fontname": "Helvetica"}
-edge = {"fontsize": "11", "fontname": "Helvetica"}
+REGION, VPC, SOFT = "#00A4A6", "#8C4FFF", "#F7F5FC"
+PUB, PUBF, PRV, PRVF = "#7AA116", "#F2F6E8", "#00A4A6", "#E6F6F7"
+SEC, GREY = "#DD344C", "#7D8998"
+WEB, SITE, PEER, TGW, PL, MGMT, OUT = "#147EBA", "#ED7100", "#7AA116", "#8C4FFF", "#00A4A6", "#DD344C", "#7D8998"
 
-def vpc(label):
-    return Cluster(label, graph_attr={"bgcolor": "#F2F9F2", "pencolor": "#248814", "fontsize": "14",
-                                      "fontname": "Helvetica-Bold", "style": "rounded"})
+s = Svg(2000, 1290)
+s.text(1000, 42, "Secure AWS Network Architecture & Hybrid Connectivity", 28, INK, "middle", "700")
+s.text(1000, 68, "DEPI ONL5_ISS11_G1  ·  eu-west-1  ·  built with Terraform", 14, "#545B64", "middle")
 
-def subnet(label, public):
-    color = "#E6F2F8" if public else "#EEF0F8"
-    pen = "#147EBA" if public else "#5A6BB0"
-    return Cluster(label, graph_attr={"bgcolor": color, "pencolor": pen, "fontsize": "12",
-                                      "fontname": "Helvetica", "style": "rounded,dashed"})
+# ---------------- outside AWS ----------------
+s.box(15, 95, 225, 230, "Edge · global", GREY, dash=True, size=13)
+s.text(30, 135, "WAF scope: us-east-1", 11.5, "#545B64")
+s.icon("waf", 75, 205, "AWS WAF\nrules · rate · geo")
+s.icon("cloudfront", 180, 205, "CloudFront\nHTTPS")
+s.box(15, 355, 225, 900, "Outside AWS", GREY, dash=True, size=13)
+s.icon("users", 127, 470, "Internet users")
+s.icon("client", 127, 700, "Remote employee")
+s.icon("user", 127, 1085, "Administrator\nIAM user + MFA")
 
-with Diagram("Secure AWS Network Architecture & Hybrid Connectivity  (DEPI ONL5_ISS11_G1)",
-             filename="architecture", outformat="png", show=False, direction="LR",
-             graph_attr=graph, node_attr=node, edge_attr=edge):
+# ---------------- AWS cloud / region ----------------
+s.box(260, 95, 1725, 1180, "AWS Cloud", INK, size=16)
+s.box(275, 130, 1695, 1130, "Region eu-west-1", REGION, dash=True, size=14)
+s.icon("simple-storage-service-s3", 335, 230, "Site bucket\nprivate · OAC")
+s.icon("client-vpn", 335, 700, "Client VPN\nmutual TLS")
 
-    users = Users("Internet users")
-    remote = Client("Remote user")
+# Hub VPC
+s.box(400, 165, 690, 760, "Hub VPC  10.0.0.0/16  ·  2 AZs", VPC, SOFT)
+s.icon("internet-gateway", 400, 470, "")
+s.text(400, 520, "Internet", 12.5, INK, "middle", "600"); s.text(400, 535, "gateway", 12.5, INK, "middle", "600")
+s.box(450, 200, 205, 560, "Public subnets", PUB, PUBF, size=13, bold=False)
+s.text(464, 240, "10.0.1.0/24 · 10.0.2.0/24", 11.5, "#545B64")
+s.icon("elb-application-load-balancer", 552, 380, "Application LB\n:80 from internet")
+s.icon("nat-gateway", 552, 610, "NAT gateway\noutbound only")
+s.icon("endpoint", 552, 840, "S3 gateway\nendpoint")
+s.box(690, 200, 380, 520, "Private subnets  ·  NACL", PRV, PRVF, size=13, bold=False)
+s.text(704, 240, "10.0.11.0/24 · 10.0.12.0/24", 11.5, "#545B64")
+s.icon("ec2", 780, 380, "Web server\nIMDSv2 · no SSH")
+s.icon("rds", 975, 380, "RDS MySQL\nencrypted · private")
+s.icon("privatelink", 975, 590, "PrivateLink\ninterface endpoint")
+s.box(690, 745, 380, 160, "TGW attachment subnets", PRV, PRVF, size=13, bold=False)
+s.text(704, 785, "10.0.254.0/28 · 10.0.254.16/28", 11.5, "#545B64")
+s.icon("transit-gateway-attachment", 975, 830, "TGW attachment\nNACL applies")
 
-    with Cluster("Edge (global, WAF in us-east-1)",
-                 graph_attr={"bgcolor": "#FFF6EC", "pencolor": "#ED7100", "style": "rounded",
-                             "fontsize": "14", "fontname": "Helvetica-Bold"}):
-        waf = WAF("AWS WAF\nmanaged rules, rate, geo")
-        cf = CloudFront("CloudFront\nHTTPS")
+# connectivity column
+s.icon("vpc-peering", 1180, 250, "VPC peering\nnon-transitive")
+s.icon("transit-gateway", 1180, 830, "Transit Gateway\nASN 64512")
 
-    with Cluster("AWS Cloud · eu-west-1",
-                 graph_attr={"bgcolor": "#FFFFFF", "pencolor": "#232F3E", "style": "rounded",
-                             "fontsize": "16", "fontname": "Helvetica-Bold"}):
+# Spokes
+s.box(1270, 165, 690, 205, "Spoke A  10.1.0.0/16  ·  no IGW / NAT", VPC, SOFT)
+s.box(1290, 200, 650, 155, "Private subnet  10.1.1.0/24", PRV, PRVF, size=13, bold=False)
+s.icon("ec2", 1420, 280, "Test host")
+s.icon("endpoint", 1820, 280, "SSM endpoints ×3\nssm · ssmmessages · ec2messages")
+s.box(1270, 420, 690, 270, "Spoke B  10.2.0.0/16  ·  no IGW / NAT", VPC, SOFT)
+s.box(1290, 455, 650, 220, "Private subnet  10.2.1.0/24", PRV, PRVF, size=13, bold=False)
+s.icon("privatelink", 1380, 575, "Endpoint service\nacceptance required")
+s.icon("elb-network-load-balancer", 1545, 575, "Internal NLB\nwith SG")
+s.icon("ec2", 1700, 575, "Test host\n:80 service")
+s.icon("endpoint", 1860, 575, "SSM endpoints ×3")
+s.box(1500, 740, 460, 185, "Simulated office  192.168.0.0/16", VPC, SOFT)
+s.box(1520, 775, 420, 135, "Public subnet", PUB, PUBF, size=13, bold=False)
+s.icon("generic-office-building", 1820, 845, "strongSwan\ncustomer gateway")
+s.icon("site-to-site-vpn", 1400, 830, "Site-to-Site VPN\nIPsec · 2 tunnels")
 
-        site = S3("Site bucket\n(private, OAC)")
-        cvpn = ClientVpn("Client VPN\nmutual TLS")
-        tgw = TransitGateway("Transit Gateway")
+# Security, access & monitoring (same background as the VPCs)
+s.box(400, 975, 1560, 270, "", SEC, SOFT)
+s.text(1945, 997, "Security, access & monitoring", 15, INK, "end", "700")
+s.icon("systems-manager", 500, 1085, "Session Manager\nshell without SSH")
+s.icon("secrets-manager", 660, 1085, "Secrets Manager\nDB password")
+s.icon("route-53-hosted-zone", 820, 1085, "Route 53\nprivate zone")
+s.icon("cloudtrail", 1010, 1045, "CloudTrail\nevery API call")
+s.icon("vpc-flow-logs", 1010, 1165, "VPC Flow Logs\nevery VPC")
+s.icon("simple-storage-service-s3", 1290, 1045, "Log bucket\nencrypted · versioned")
+s.icon("athena", 1530, 1045, "Athena\ninvestigation")
+s.icon("cloudwatch", 1530, 1165, "CloudWatch\nalarms")
+s.icon("simple-notification-service-sns", 1820, 1165, "SNS → email")
 
-        with vpc("Hub VPC 10.0.0.0/16  (2 AZs)"):
-            igw = InternetGateway("Internet gateway")
-            with subnet("Public subnets 10.0.1.0/24 · 10.0.2.0/24", True):
-                alb = ALB("ALB :80")
-                nat = NATGateway("NAT gateway")
-            with subnet("Private subnets 10.0.11.0/24 · 10.0.12.0/24  (NACL)", False):
-                web = EC2("Web server\nIMDSv2, no SSH")
-                db = RDS("RDS MySQL\nencrypted")
-                ple = Privatelink("PrivateLink\nendpoint")
-            peer = VPCPeering("VPC peering")
+# ---------------- connections ----------------
+# static site
+s.line([(150, 440), (224, 360), (224, 222), (214, 222)], SITE, "HTTPS", (224, 320))
+s.line([(105, 205), (148, 205)], SITE, arrow=False, dash="3 4")
+s.line([(212, 192), (290, 192), (290, 215), (303, 215)], SITE, "OAC", (262, 160))
+# web app: internet -> IGW -> ALB -> web -> RDS
+s.line([(160, 470), (368, 470)], WEB, "HTTP", (265, 462))
+s.line([(432, 470), (490, 470), (490, 380), (520, 380)], WEB)
+s.line([(584, 380), (748, 380)], WEB, ":80 from ALB SG", (668, 366))
+s.line([(812, 380), (943, 380)], WEB, ":3306", (878, 366))
+s.line([(755, 456), (755, 520), (640, 590), (584, 600)], OUT, dash="6 5")
+# remote employee -> client VPN -> hub only
+s.line([(160, 700), (303, 700)], TGW, "TLS", (232, 690))
+s.line([(367, 700), (430, 700), (430, 945), (700, 945), (700, 395), (746, 395)], TGW, "hub only", (560, 945))
+# peering web <-> Spoke A
+s.line([(780, 348), (780, 300), (1120, 300), (1150, 262)], PEER, both=True)
+s.line([(1212, 250), (1240, 250), (1240, 280), (1388, 280)], PEER, "peering", (1300, 280), both=True)
+# TGW path: web -> attachment -> TGW -> Spoke B
+s.line([(820, 456), (820, 720), (905, 720), (905, 830), (943, 830)], TGW, both=True)
+s.line([(1007, 830), (1148, 830)], TGW, both=True)
+s.line([(1180, 798), (1180, 715), (1720, 715), (1720, 652)], TGW, "TGW route", (1440, 715), both=True)
+s.line([(1212, 845), (1368, 845)], TGW, both=True)
+s.line([(1432, 845), (1788, 845)], TGW, "IPsec", (1640, 845), both=True)
+# PrivateLink: one service, one port
+s.line([(812, 395), (900, 430), (900, 590), (943, 590)], PL, ":80 only", (900, 505))
+s.line([(1007, 590), (1100, 590), (1100, 560), (1348, 560)], PL, "PrivateLink", (1230, 560))
+s.line([(1412, 575), (1513, 575)], PL)
+s.line([(1577, 575), (1668, 575)], PL)
+# SSM endpoints (dotted)
+s.line([(1788, 280), (1452, 280)], MGMT, dash="2 4", arrow=False)
+s.line([(1828, 575), (1732, 575)], MGMT, dash="2 4", arrow=False)
+# admin -> Session Manager -> web
+s.line([(160, 1085), (468, 1085)], MGMT, "IAM + MFA", (320, 1075))
+s.line([(500, 1053), (500, 962), (672, 962), (672, 420), (746, 420)], MGMT, "shell, no SSH", (586, 962), dash="7 5")
+# logging pipeline
+s.line([(1042, 1045), (1258, 1045)], MGMT)
+s.line([(1042, 1155), (1150, 1155), (1150, 1060), (1258, 1060)], MGMT)
+s.line([(1322, 1045), (1498, 1045)], MGMT, "SQL", (1410, 1045))
+s.line([(1042, 1175), (1498, 1175)], MGMT, "metric filters", (1300, 1175))
+s.line([(1562, 1165), (1788, 1165)], MGMT, "alarm", (1680, 1165))
 
-        with vpc("Spoke A 10.1.0.0/16"):
-            spoke_a = EC2("Test host\nno internet")
+# legend
+lx, ly = 1500, 72
+items = [("Website (ALB)", WEB), ("Static site", SITE), ("Peering", PEER), ("TGW / VPN", TGW),
+         ("PrivateLink", PL), ("Management & logs", MGMT)]
+for i, (t, c) in enumerate(items):
+    x = 1080 + i * 150
+    s.line([(x, 112), (x + 28, 112)], c, arrow=False, sw=3)
+    s.text(x + 34, 116, t, 11.5, INK)
 
-        with vpc("Spoke B 10.2.0.0/16"):
-            nlb = NLB("NLB\n(endpoint service)")
-            spoke_b = EC2("Test host\nno internet")
-            ssm_ep = Endpoint("SSM interface\nendpoints")
-
-        with Cluster("Simulated office 192.168.0.0/16 (VPC)",
-                     graph_attr={"bgcolor": "#F7F7F7", "pencolor": "#7D8998", "style": "rounded",
-                                 "fontsize": "14", "fontname": "Helvetica-Bold"}):
-            office = GenericOfficeBuilding("strongSwan\ncustomer gateway")
-
-        vpn = SiteToSiteVpn("Site-to-Site VPN\nIPsec")
-
-        with Cluster("Security, access & monitoring",
-                     graph_attr={"bgcolor": "#FBEFF4", "pencolor": "#C7131F", "style": "rounded",
-                                 "fontsize": "14", "fontname": "Helvetica-Bold"}):
-            ssm = SystemsManager("Session Manager")
-            secrets = SecretsManager("Secrets Manager\nRDS password")
-            trail = Cloudtrail("CloudTrail")
-            flow = VPCFlowLogs("VPC Flow Logs")
-            logs = S3("Log bucket")
-            athena = Athena("Athena\nIR queries")
-            cw = Cloudwatch("CloudWatch alarms\nscan · SSH · WAF")
-            sns = SNS("SNS → email")
-            dns = Route53HostedZone("Route 53\nprivate zone + health check")
-
-    # Static site path
-    users >> Edge(label="HTTPS", color="#ED7100") >> cf
-    waf - Edge(style="dotted", color="#ED7100") - cf
-    cf >> Edge(label="OAC", color="#ED7100") >> site
-
-    # App path (3 tiers)
-    users >> Edge(label="HTTP", color="#147EBA") >> igw >> Edge(color="#147EBA") >> alb
-    alb >> Edge(label=":80 from ALB SG", color="#147EBA") >> web
-    web >> Edge(label=":3306 from web SG", color="#147EBA") >> db
-    web >> Edge(label="outbound only", style="dashed", color="#7D8998") >> nat
-
-    # Connectivity
-    web - Edge(color="#248814") - peer - Edge(label="peering", color="#248814") - spoke_a
-    web - Edge(color="#8C4FFF") - tgw - Edge(label="TGW", color="#8C4FFF") - spoke_b
-    office - Edge(color="#8C4FFF") - vpn - Edge(label="IPsec", color="#8C4FFF") - tgw
-    remote >> Edge(label="TLS", color="#8C4FFF") >> cvpn >> Edge(label="hub only", color="#8C4FFF") >> web
-    web >> Edge(label="no routing", style="dashed", color="#248814") >> ple >> nlb >> spoke_b
-    ssm_ep - Edge(style="dotted", color="#7D8998") - spoke_b
-
-    # Security & monitoring
-    ssm >> Edge(label="shell, no SSH", style="dashed", color="#C7131F") >> web
-    flow >> Edge(color="#C7131F") >> logs >> Edge(color="#C7131F") >> athena
-    trail >> Edge(color="#C7131F") >> logs
-    flow >> Edge(color="#C7131F") >> cw >> Edge(color="#C7131F") >> sns
+open("architecture.svg", "w").write(s.render())
+print("ok")
