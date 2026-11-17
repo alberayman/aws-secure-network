@@ -24,6 +24,7 @@ module "vpc" {
   private_subnet_cidrs = ["10.0.11.0/24", "10.0.12.0/24"]
   enable_nat           = var.enable_nat
   extra_allowed_cidrs  = local.hybrid ? concat(values(local.spoke_cidrs), [local.onprem_cidr]) : []
+  tgw_subnet_cidrs     = local.hybrid ? ["10.0.254.0/28", "10.0.254.16/28"] : []
 }
 
 # ---------------- Week 1: EC2 + ALB + RDS (Members 2 and 4) ----------------
@@ -43,7 +44,7 @@ module "connectivity" {
   az                         = local.azs[0]
   hub_vpc_id                 = module.vpc.vpc_id
   hub_vpc_cidr               = local.hub_cidr
-  hub_private_subnet_ids     = module.vpc.private_subnet_ids
+  hub_tgw_subnet_ids         = module.vpc.tgw_subnet_ids
   hub_private_route_table_id = module.vpc.private_route_table_id
   instance_profile_name      = module.compute.ec2_profile_name
   spokes                     = local.spoke_cidrs

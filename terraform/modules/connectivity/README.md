@@ -7,7 +7,7 @@ and a simulated office (`192.168.0.0/16`) with a **strongSwan** router connected
 **Site-to-Site VPN** to the TGW. Spokes have no internet; they are managed through the SSM
 interface endpoints in `envs/dev/endpoints.tf`.
 
-Inputs: `name`, `az`, `hub_vpc_id`, `hub_vpc_cidr`, `hub_private_subnet_ids`,
+Inputs: `name`, `az`, `hub_vpc_id`, `hub_vpc_cidr`, `hub_tgw_subnet_ids`,
 `hub_private_route_table_id`, `instance_profile_name`, `spokes`, `onprem_cidr`.
 
 Outputs: `spoke_vpc_ids`, `spoke_subnet_ids`, `spoke_cidrs`, `onprem_vpc_id`, `onprem_instance_id`,

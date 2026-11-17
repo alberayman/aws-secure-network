@@ -33,14 +33,15 @@ in one sentence you can say out loud, the command, what you should see, and the 
 
 | # | What it proves | Command / action | Expected | Evidence | Status |
 |---|---|---|---|---|---|
-| T14 | Hub ↔ Spoke A connected by **VPC peering** | hub web (SSM): `ping -c 3 <spoke_a_ip>` | replies | `w2-2.4-hub-to-spoke-a.png` | ⬜ |
-| T15 | Hub ↔ Spoke B connected by **Transit Gateway** | hub web: `ping -c 3 <spoke_b_ip>`; `curl http://<spoke_b_ip>` | replies; "Spoke B service" | `w2-2.4-hub-to-spoke-b.png` | ⬜ |
-| T16 | Peering is **not transitive**: Spoke A cannot use the hub to reach Spoke B | Spoke A (SSM): `ping -c 3 <spoke_b_ip>` | fails ❌ | `w2-2.4-spoke-a-to-b-blocked.png` | ⬜ |
+| T14 | Hub ↔ Spoke A connected by **VPC peering** | hub web (SSM): `ping -c 3 <spoke_a_ip>` | replies | `w2-2.9-tf-tests.txt` (2.9-1) | ✅ 2026-11-17 |
+| T15 | Hub ↔ Spoke B connected by **Transit Gateway** | hub web: `ping -c 3 <spoke_b_ip>`; `curl http://<spoke_b_ip>` | replies; "Spoke B service" | `w2-2.9-tf-tests.txt` (2.9-2) | ✅ 2026-11-17 |
+| T16 | Peering is **not transitive**: Spoke A cannot use the hub to reach Spoke B | Spoke A (SSM): `ping -c 3 <spoke_b_ip>` | fails ❌ | `w2-2.9-tf-tests-from-spoke-a.png` (2.9-5) | ✅ 2026-11-17 |
 | T17 | The office reaches the hub over an **encrypted Site-to-Site VPN** | VPN > Tunnel details; office router: `sudo ipsec statusall`, `ping -c 3 <web_private_ip>` | tunnel UP, `ESTABLISHED`, replies | `w2-2.2-vpn-up.png`, `w2-2.2-office-to-hub.png` | ⬜ |
 | T18 | **Segmentation**: the office can reach the hub but not Spoke B | office router: `ping -c 3 <spoke_b_ip>` | fails ❌ (design decision, documented) | `w2-2.4-office-to-spoke-b-blocked.png` | ⬜ |
-| T19 | Spokes are isolated from the internet | Spoke A: `curl -m 5 https://example.com` | fails ❌ (no IGW, no NAT) | `w2-2.4-spoke-no-internet.png` | ⬜ |
-| T20 | Private hosts are managed **without internet**, through VPC endpoints | Systems Manager > Fleet Manager; SSM session on a spoke instance | both spoke instances online; session opens | `w2-2.3-fleet-manager.png` | ⬜ |
-| T21 | **PrivateLink** shares one service with no routing between the VPCs | hub web: `curl http://<privatelink_dns>` | "Spoke B service" | `w2-2.3-privatelink.png` | ⬜ |
+| T19 | Spokes are isolated from the internet | Spoke A: `curl -m 5 https://example.com` | fails ❌ (no IGW, no NAT) | `w2-2.9-tf-tests-from-spoke-a.png`, `-spoke-b.png` (2.9-9) | ✅ 2026-11-17 |
+| T20 | Private hosts are managed **without internet**, through VPC endpoints | Systems Manager > Fleet Manager; SSM session on a spoke instance | both spoke instances online; session opens | `w2-2.9-tf-tests-from-spoke-*.png` (sessions via endpoints, 2.9-8) | ✅ 2026-11-17 (sessions; Fleet Manager screenshot ⬜) |
+| T21 | **PrivateLink** shares one service with no routing between the VPCs | hub web: `curl http://<privatelink_dns>` | "Spoke B service" | `w2-2.9-tf-tests.txt` (2.9-3) | ✅ 2026-11-17 |
+| T21b | **TGW traffic is filtered by the hub NACL** (fixed 2026-11-17: attachment in its own /28 subnets) | console: add NACL rule 150 DENY ICMP from 10.2.0.0/16 on `secnet-private-nacl`; hub web `ping <spoke_b_ip>` + `curl`; then `terraform plan`/`apply` restores | ping fails ❌, curl OK; plan shows 1 drift change | `w2-2.10-nacl-drill-*.png` | ✅ 2026-11-17 |
 | T22 | A remote user connects with **Client VPN** (mutual TLS certificates) | connect the VPN client; `ping <web_private_ip>` | connected; replies | `w2-2.7-client-vpn-ping.png` | ⬜ |
 | T23 | Even on the VPN, security groups still apply | `curl -m 5 http://<web_private_ip>` | fails ❌ (web only accepts HTTP from the ALB) | `w2-2.7-client-vpn-http-blocked.png` | ⬜ |
 | T24 | VPN users only reach what they are authorized for | `ping <spoke_b_ip>` | fails ❌ (no authorization rule for 10.2.0.0/16) | `w2-2.7-client-vpn-spoke-b-blocked.png` | ⬜ |

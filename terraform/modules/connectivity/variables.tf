@@ -19,8 +19,8 @@ variable "hub_vpc_cidr" {
   default     = "10.0.0.0/16"
 }
 
-variable "hub_private_subnet_ids" {
-  description = "Hub private subnets for the TGW attachment (one per AZ)"
+variable "hub_tgw_subnet_ids" {
+  description = "Hub dedicated /28 subnets for the TGW attachment (one per AZ), not the workload subnets"
   type        = list(string)
 }
 

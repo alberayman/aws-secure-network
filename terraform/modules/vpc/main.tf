@@ -142,3 +142,56 @@ resource "aws_network_acl" "private" {
 
   tags = { Name = "${var.name}-private-nacl" }
 }
+
+# ---------- Week 2: dedicated Transit Gateway attachment subnets ----------
+# AWS does not evaluate NACL rules for traffic from a TGW to instances in the SAME subnet as
+# the attachment (found in the 2026-10-18 console lab). With the attachment in its own /28
+# subnets, TGW traffic must cross into the private subnets, so the private NACL applies to it.
+resource "aws_subnet" "tgw" {
+  count             = length(var.tgw_subnet_cidrs)
+  vpc_id            = aws_vpc.this.id
+  cidr_block        = var.tgw_subnet_cidrs[count.index]
+  availability_zone = var.azs[count.index]
+  tags              = { Name = "${var.name}-tgw-${count.index + 1}", Tier = "tgw" }
+}
+
+# Local route only: the TGW delivers into the hub; return traffic uses the private route table.
+resource "aws_route_table" "tgw" {
+  count  = length(var.tgw_subnet_cidrs) > 0 ? 1 : 0
+  vpc_id = aws_vpc.this.id
+  tags   = { Name = "${var.name}-tgw-rt" }
+}
+
+resource "aws_route_table_association" "tgw" {
+  count          = length(aws_subnet.tgw)
+  subnet_id      = aws_subnet.tgw[count.index].id
+  route_table_id = aws_route_table.tgw[0].id
+}
+
+# AWS guidance: keep the attachment subnets' NACL open and filter at the workload tier
+# (private NACL + security groups). Nothing else runs in these subnets.
+resource "aws_network_acl" "tgw" {
+  count      = length(var.tgw_subnet_cidrs) > 0 ? 1 : 0
+  vpc_id     = aws_vpc.this.id
+  subnet_ids = aws_subnet.tgw[*].id
+
+  ingress {
+    rule_no    = 100
+    protocol   = "-1"
+    action     = "allow"
+    cidr_block = "0.0.0.0/0"
+    from_port  = 0
+    to_port    = 0
+  }
+
+  egress {
+    rule_no    = 100
+    protocol   = "-1"
+    action     = "allow"
+    cidr_block = "0.0.0.0/0"
+    from_port  = 0
+    to_port    = 0
+  }
+
+  tags = { Name = "${var.name}-tgw-nacl" }
+}

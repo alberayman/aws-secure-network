@@ -1,12 +1,43 @@
 # Week 2 (Member 4): Spoke B publishes its web service with PrivateLink; the hub consumes it
 # through an interface endpoint. No routing between the VPCs is needed for this path.
 
+# An NLB can only get security groups at creation, so it is created with one.
+# Its rules also apply to PrivateLink traffic (the hub endpoint's 10.0.x address).
+resource "aws_security_group" "nlb" {
+  count       = local.hybrid ? 1 : 0
+  name        = "${var.name}-spoke-b-nlb-sg"
+  description = "NLB for the PrivateLink service: TCP 80 in, TCP 80 to targets"
+  vpc_id      = module.connectivity[0].spoke_vpc_ids["b"]
+  tags        = { Name = "${var.name}-spoke-b-nlb-sg" }
+}
+
+resource "aws_vpc_security_group_ingress_rule" "nlb_http" {
+  count             = local.hybrid ? 1 : 0
+  security_group_id = aws_security_group.nlb[0].id
+  description       = "HTTP from AWS networks (includes the hub PrivateLink endpoint)"
+  cidr_ipv4         = "10.0.0.0/8"
+  from_port         = 80
+  to_port           = 80
+  ip_protocol       = "tcp"
+}
+
+resource "aws_vpc_security_group_egress_rule" "nlb_to_targets" {
+  count             = local.hybrid ? 1 : 0
+  security_group_id = aws_security_group.nlb[0].id
+  description       = "Forwarding and health checks to the Spoke B targets"
+  cidr_ipv4         = local.spoke_cidrs["b"]
+  from_port         = 80
+  to_port           = 80
+  ip_protocol       = "tcp"
+}
+
 resource "aws_lb" "spoke_b_nlb" {
   count              = local.hybrid ? 1 : 0
   name               = "${var.name}-spoke-b-nlb"
   load_balancer_type = "network"
   internal           = true
   subnets            = [module.connectivity[0].spoke_subnet_ids["b"]]
+  security_groups    = [aws_security_group.nlb[0].id]
 }
 
 resource "aws_lb_target_group" "spoke_b" {
@@ -39,7 +70,7 @@ resource "aws_lb_listener" "spoke_b" {
 
 resource "aws_vpc_endpoint_service" "spoke_b" {
   count                      = local.hybrid ? 1 : 0
-  acceptance_required        = false # lab; production = true + allowed principals
+  acceptance_required        = true # the provider approves every consumer (accepted below)
   network_load_balancer_arns = [aws_lb.spoke_b_nlb[0].arn]
   tags                       = { Name = "${var.name}-spoke-b-service" }
 }
@@ -63,11 +94,19 @@ resource "aws_vpc_security_group_ingress_rule" "privatelink_http" {
 }
 
 resource "aws_vpc_endpoint" "consumer" {
-  count              = local.hybrid ? 1 : 0
-  vpc_id             = module.vpc.vpc_id
-  service_name       = aws_vpc_endpoint_service.spoke_b[0].service_name
-  vpc_endpoint_type  = "Interface"
-  subnet_ids         = module.vpc.private_subnet_ids
+  count             = local.hybrid ? 1 : 0
+  vpc_id            = module.vpc.vpc_id
+  service_name      = aws_vpc_endpoint_service.spoke_b[0].service_name
+  vpc_endpoint_type = "Interface"
+  # Same AZ as the NLB: the service only exists where the NLB has a subnet.
+  subnet_ids         = [module.vpc.private_subnet_ids[0]]
   security_group_ids = [aws_security_group.privatelink_consumer[0].id]
   tags               = { Name = "${var.name}-vpce-privatelink" }
+}
+
+# Provider-side approval, done in code so it is reviewed and logged like any other change.
+resource "aws_vpc_endpoint_connection_accepter" "spoke_b" {
+  count                   = local.hybrid ? 1 : 0
+  vpc_endpoint_service_id = aws_vpc_endpoint_service.spoke_b[0].id
+  vpc_endpoint_id         = aws_vpc_endpoint.consumer[0].id
 }

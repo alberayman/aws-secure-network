@@ -14,7 +14,7 @@ output "public_subnet_ids" {
 }
 
 output "private_subnet_ids" {
-  description = "Private subnet IDs (EC2, RDS, TGW attachment)"
+  description = "Private subnet IDs (EC2, RDS, endpoints)"
   value       = aws_subnet.private[*].id
 }
 
@@ -26,4 +26,9 @@ output "private_route_table_id" {
 output "nat_gateway_id" {
   description = "NAT gateway ID (expensive when idle)"
   value       = one(aws_nat_gateway.this[*].id)
+}
+
+output "tgw_subnet_ids" {
+  description = "Week 2: dedicated /28 subnets for the Transit Gateway attachment (empty when hybrid is off)"
+  value       = aws_subnet.tgw[*].id
 }

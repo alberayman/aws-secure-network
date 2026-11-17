@@ -1,0 +1,56 @@
+Week 2 Terraform build - test matrix output (2026-11-17, ~22:10 UTC)
+Stack: tf apply 92 added. Hub web 10.0.11.198, Spoke A 10.1.1.107, Spoke B 10.2.1.43
+
+--- secnet-web (hub, Session Manager)
+== 10.1.1.107
+ping OK
+Spoke A service
+== 10.2.1.43
+ping OK
+Spoke B service
+== PrivateLink
+10.0.11.96      vpce-04feef720f4aa86a3-op9lg2d7.vpce-svc-0a11ccbd5b7789305.eu-west-1.vpce.amazonaws.com
+Spoke B service
+port 80 OPEN
+port 22 CLOSED (exit=124)
+
+--- secnet-spoke-a-test (Session Manager via Spoke A interface endpoints)
+== hub-web 10.0.11.198
+ping OK
+curl FAIL
+== spoke-a 10.1.1.107
+ping OK
+Spoke A service
+== spoke-b 10.2.1.43
+ping FAIL
+curl FAIL
+== SSM DNS
+10.1.1.91       ssm.eu-west-1.amazonaws.com
+== internet
+000
+internet FAIL
+
+--- secnet-spoke-b-test (Session Manager via Spoke B interface endpoints)
+== hub-web 10.0.11.198
+ping OK
+curl FAIL
+== spoke-a 10.1.1.107
+ping FAIL
+curl FAIL
+== spoke-b 10.2.1.43
+ping OK
+Spoke B service
+== SSM DNS
+10.2.1.34       ssm.eu-west-1.amazonaws.com
+== internet
+000
+internet FAIL
+
+--- From Alber's Mac (internet)
+$ curl -s -o /dev/null -w "%{http_code}\n" http://secnet-alb-80511703.eu-west-1.elb.amazonaws.com
+200
+
+--- NACL drill (rule 150 DENY ICMP from 10.2.0.0/16), secnet-spoke-b-test shell
+sh-5.2$ date -u +%H:%M:%S; ping -c2 -W2 10.0.11.198 >/dev/null && echo "ping OK" || echo "ping FAIL"
+22:24:23
+ping FAIL

@@ -12,7 +12,7 @@ resource "aws_ec2_transit_gateway" "this" {
 resource "aws_ec2_transit_gateway_vpc_attachment" "hub" {
   transit_gateway_id = aws_ec2_transit_gateway.this.id
   vpc_id             = var.hub_vpc_id
-  subnet_ids         = var.hub_private_subnet_ids
+  subnet_ids         = var.hub_tgw_subnet_ids # own /28s, so the private NACL filters TGW traffic
   tags               = { Name = "${var.name}-tgw-att-hub" }
 }
 
