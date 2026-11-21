@@ -38,3 +38,7 @@ vpn-*.txt
 pki/
 sleep.txt
 sleep.tfplan
+demo-run-*.log
+
+# one-off drill plans
+geo-plan.txt

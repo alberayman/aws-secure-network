@@ -9,6 +9,22 @@ in one sentence you can say out loud, the command, what you should see, and the 
 - Status: ✅ passed (date) · ⬜ not run yet. Detailed steps live in `docs/guides/week*.md`;
   results are also recorded in `docs/week<N>/README.md`.
 
+## Run them automatically
+
+```bash
+make demo                         # interactive: says what each test proves + expected result, waits for Enter, runs it
+make demo ARGS="--auto"           # no pauses: rehearsal / evidence run (log saved as demo-run-<date>.log)
+make demo ARGS="--only T1,T18,T29"
+make demo ARGS="--week 2"
+make demo ARGS="--with-plan"      # also T11 terraform plan (~1 min);  --slow adds T31 (WAF rate limit)
+```
+
+`scripts/demo-tests.sh` reads every ID and IP from `terraform output`, runs the internet-side tests
+from the laptop, the API checks with the AWS CLI, and the tests **inside** AWS (hub, spokes, office
+router) through **SSM Run Command** (no SSH; each command is logged in CloudTrail). Parts that are
+switched off are shown as SKIP. Automated: T1–T5, T7–T11, T13–T21, T26–T31, T1b, T29b, T34. Drills that change
+something stay manual: T6, T21b, T32, T33, T35–T41.
+
 ---
 
 ## Week 1: the hub (secure 3-tier app + logging)
@@ -21,7 +37,7 @@ in one sentence you can say out loud, the command, what you should see, and the 
 | T4 | Admins get a shell **without SSH, keys or open ports** | `aws ssm start-session --target <web_instance_id>` | shell opens; no port 22 rule exists anywhere | `w1-1.4-ssm-db-open.png` | ✅ 2026-10-05 |
 | T5 | The app tier can reach the database (allowed path) | in the SSM session: `timeout 3 bash -c '</dev/tcp/<db_endpoint>/3306' && echo OPEN` (stronger: `mysql -h <db_endpoint> -u admin -p` with the password from Secrets Manager) | `OPEN` / `mysql>` prompt | `w1-1.4-ssm-db-open.png` | ✅ 2026-10-05 (port test) |
 | T6 | The database rule is **least privilege**: remove it and EC2 loses access | console: delete SG rule `rds_from_ec2`, repeat T5, then `terraform apply` to restore it | timeout ❌, then OPEN again after apply (plan shows the drift) | `w1-1.3-tf-drift-*.png` | ✅ 2026-10-11 |
-| T7 | Nothing on the internet can reach port 22 | VPC > Reachability Analyzer: IGW → web instance, port 22 (≈ $0.10) | *Not reachable*, names the blocking SG ❌ | `w1-1.3-reachability-22.png` | ✅ 2026-10-11 (3 blockers: no public IP, NACL, SG) |
+| T7 | Nothing on the internet can reach port 22 | VPC > Reachability Analyzer: IGW → web instance, port 22 (≈ $0.10) | *Not reachable*, names the blocking SG ❌ | `w1-1.3-reachability-22.png` | ✅ 2026-10-11 (3 blockers: no public IP, NACL, SG) · automated check 2026-11-21: **found** SSH 0.0.0.0/0 on the default VPC's default SG (outside the project), rule revoked, re-run PASS (`w1-T7-default-vpc-sg-*.png`) |
 | T8 | Anything launched without a security group gets **no** network access | VPC > Security groups > `default` of `secnet-vpc` | 0 inbound, 0 outbound rules | `w1-1.1-default-sg-empty-*.png` | ✅ 2026-10-05 (console lab) |
 | T9 | Private subnets have a second, subnet-level filter (stateless NACL) | VPC > Network ACLs > `secnet-private-nacl` | rules 100/110/120 + deny; associated with both private subnets | `w1-1.1-nacl-*.png` | ✅ 2026-10-05 (console lab) |
 | T10 | Every API call is recorded with **who** did it | create any SG in the console, wait 5–15 min: CloudTrail > Event history | `CreateSecurityGroup` with user `secnet-lab`; S3 has `AWSLogs/.../CloudTrail/` | `w1-1.4-cloudtrail-events.png`, `w1-1.4-cloudtrail-s3.png` | ✅ 2026-10-11 |
@@ -36,30 +52,32 @@ in one sentence you can say out loud, the command, what you should see, and the 
 | T14 | Hub ↔ Spoke A connected by **VPC peering** | hub web (SSM): `ping -c 3 <spoke_a_ip>` | replies | `w2-2.9-tf-tests.txt` (2.9-1) | ✅ 2026-11-17 |
 | T15 | Hub ↔ Spoke B connected by **Transit Gateway** | hub web: `ping -c 3 <spoke_b_ip>`; `curl http://<spoke_b_ip>` | replies; "Spoke B service" | `w2-2.9-tf-tests.txt` (2.9-2) | ✅ 2026-11-17 |
 | T16 | Peering is **not transitive**: Spoke A cannot use the hub to reach Spoke B | Spoke A (SSM): `ping -c 3 <spoke_b_ip>` | fails ❌ | `w2-2.9-tf-tests-from-spoke-a.png` (2.9-5) | ✅ 2026-11-17 |
-| T17 | The office reaches the hub over an **encrypted Site-to-Site VPN** | VPN > Tunnel details; office router: `sudo ipsec statusall`, `ping -c 3 <web_private_ip>` | tunnel UP, `ESTABLISHED`, replies | `w2-2.2-vpn-up.png`, `w2-2.2-office-to-hub.png` | ⬜ |
-| T18 | **Segmentation**: the office can reach the hub but not Spoke B | office router: `ping -c 3 <spoke_b_ip>` | fails ❌ (design decision, documented) | `w2-2.4-office-to-spoke-b-blocked.png` | ⬜ |
+| T17 | The office reaches the hub over an **encrypted Site-to-Site VPN** | VPN > Tunnel details; office router: `sudo ipsec statusall`, `ping -c 3 <web_private_ip>` | tunnel UP, `ESTABLISHED`, replies | `w2-2.12-vpn-ipsec-status.png`, `w2-2.12-vpn-office-tests.png` | ✅ 2026-11-21 |
+| T18 | **Segmentation**: the office can reach the hub but not Spoke B | office router: `ping -c 3 <spoke_b_ip>` | fails ❌ (design decision, documented) | `w2-2.12-vpn-office-tests.png`, `w2-2.12-tgw-route-tables-vpn-telemetry.png` | ✅ 2026-11-21 (TGW route tables) |
 | T19 | Spokes are isolated from the internet | Spoke A: `curl -m 5 https://example.com` | fails ❌ (no IGW, no NAT) | `w2-2.9-tf-tests-from-spoke-a.png`, `-spoke-b.png` (2.9-9) | ✅ 2026-11-17 |
 | T20 | Private hosts are managed **without internet**, through VPC endpoints | Systems Manager > Fleet Manager; SSM session on a spoke instance | both spoke instances online; session opens | `w2-2.9-tf-tests-from-spoke-*.png` (sessions via endpoints, 2.9-8) | ✅ 2026-11-17 (sessions; Fleet Manager screenshot ⬜) |
 | T21 | **PrivateLink** shares one service with no routing between the VPCs | hub web: `curl http://<privatelink_dns>` | "Spoke B service" | `w2-2.9-tf-tests.txt` (2.9-3) | ✅ 2026-11-17 |
 | T21b | **TGW traffic is filtered by the hub NACL** (fixed 2026-11-17: attachment in its own /28 subnets) | console: add NACL rule 150 DENY ICMP from 10.2.0.0/16 on `secnet-private-nacl`; hub web `ping <spoke_b_ip>` + `curl`; then `terraform plan`/`apply` restores | ping fails ❌, curl OK; plan shows 1 drift change | `w2-2.10-nacl-drill-*.png` | ✅ 2026-11-17 |
-| T22 | A remote user connects with **Client VPN** (mutual TLS certificates) | connect the VPN client; `ping <web_private_ip>` | connected; replies | `w2-2.7-client-vpn-ping.png` | ⬜ |
-| T23 | Even on the VPN, security groups still apply | `curl -m 5 http://<web_private_ip>` | fails ❌ (web only accepts HTTP from the ALB) | `w2-2.7-client-vpn-http-blocked.png` | ⬜ |
-| T24 | VPN users only reach what they are authorized for | `ping <spoke_b_ip>` | fails ❌ (no authorization rule for 10.2.0.0/16) | `w2-2.7-client-vpn-spoke-b-blocked.png` | ⬜ |
-| T25 | Remote access is audited | CloudWatch log group `/secnet/client-vpn` | certificate common name, connect time, bytes | `w2-2.7-client-vpn-log.png` | ⬜ |
+| T22 | A remote user connects with **Client VPN** (mutual TLS certificates) | connect the VPN client; `ping <web_private_ip>` | connected; replies | `w2-2.7-client-vpn-ping.png` | ➖ design-only (cut 2026-11-21) |
+| T23 | Even on the VPN, security groups still apply | `curl -m 5 http://<web_private_ip>` | fails ❌ (web only accepts HTTP from the ALB) | `w2-2.7-client-vpn-http-blocked.png` | ➖ design-only (cut 2026-11-21) |
+| T24 | VPN users only reach what they are authorized for | `ping <spoke_b_ip>` | fails ❌ (no authorization rule for 10.2.0.0/16) | `w2-2.7-client-vpn-spoke-b-blocked.png` | ➖ design-only (cut 2026-11-21) |
+| T25 | Remote access is audited | CloudWatch log group `/secnet/client-vpn` | certificate common name, connect time, bytes | `w2-2.7-client-vpn-log.png` | ➖ design-only (cut 2026-11-21) |
 | T26 | All traffic is recorded (Flow Logs) | VPC > each VPC > Flow logs; S3 `.log.gz` files | status Active on every VPC; can name top 3 talkers | `w2-2.5-flow-logs-active.png` | ⬜ |
 
 ## Week 3: edge security (CloudFront, WAF, Route 53)
 
 | # | What it proves | Command / action | Expected | Evidence | Status |
 |---|---|---|---|---|---|
-| T27 | The S3 bucket behind the site is **private** | open the direct S3 object URL | `AccessDenied` ❌ | `w3-3.4-s3-direct-denied.png` | ⬜ |
-| T28 | The site is served over HTTPS through CloudFront only | `curl -s -o /dev/null -w "%{http_code}\n" $CF/index.html` | `200` | `w3-3.4-cloudfront-200.png` | ⬜ |
-| T29 | WAF blocks **SQL injection** | `curl -G … "$CF/index.html" --data-urlencode "id=1' OR '1'='1"` | `403` ❌ | `w3-3.4-sqli-403.png` | ⬜ |
-| T30 | WAF blocks **cross-site scripting** | `curl -G … --data-urlencode "q=<script>alert(1)</script>"` | `403` ❌ | `w3-3.4-xss-403.png` | ⬜ |
-| T31 | WAF **rate limit** stops floods (basic DDoS defence) | 300 requests in a loop, `sort \| uniq -c` | mix of `200` and `403` | `w3-3.4-rate-limit.png` | ⬜ |
-| T32 | WAF can **geo-block** a country | add your own country to the geo rule, reload, then remove it | `403`, then `200` | `w3-3.4-geo-block.png` | ⬜ |
-| T33 | Attacks are **logged and alerted** | WAF > Sampled requests; CloudWatch alarm; email inbox | rule name per blocked request; alarm *In alarm*; email received | `w3-3.5-waf-alarm.png`, `w3-3.5-alarm-email.png` | ⬜ |
-| T34 | Internal DNS name and **health check** work (failover design) | inside the VPC: `curl app.secnet.internal`; Route 53 health check | page loads; Healthy → Unhealthy → Healthy | `w3-3.1-route53.png`, `w3-3.1-health-check.png` | ⬜ |
+| T27 | The S3 bucket behind the site is **private** | open the direct S3 object URL | `AccessDenied` ❌ | `w3-3.4-s3-direct-denied.png` | ✅ |
+| T28 | The site is served over HTTPS through CloudFront only | `curl -s -o /dev/null -w "%{http_code}\n" $CF/index.html` | `200` | `w3-3.4-cloudfront-200.png` | ✅ |
+| T29 | WAF blocks **SQL injection** | `curl -G … "$CF/index.html" --data-urlencode "id=1' OR '1'='1"` | `403` ❌ | `w3-3.4-sqli-403.png` | ✅ |
+| T30 | WAF blocks **cross-site scripting** | `curl -G … --data-urlencode "q=<script>alert(1)</script>"` | `403` ❌ | `w3-3.4-xss-403.png` | ✅ |
+| T31 | WAF **rate limit** stops floods (basic DDoS defence) | 300 requests in a loop, `sort \| uniq -c` | mix of `200` and `403` | `w3-3.4-rate-limit.png` | ✅ |
+| T32 | WAF can **geo-block** a country | add your own country to the geo rule, reload, then remove it | `403`, then `200` | `w3-3.4-geo-block.png` | ✅ |
+| T33 | Attacks are **logged and alerted** | WAF > Sampled requests; CloudWatch alarm; email inbox | rule name per blocked request; alarm *In alarm*; email received | `w3-3.5-waf-alarm.png`, `w3-3.5-alarm-email.png` | ✅ |
+| T1b | **Nobody can bypass CloudFront**: the ALB refuses direct traffic (D8) | `curl -m 6 http://<alb-dns>` | `000` (times out: SG allows only the CloudFront prefix list; listener 403 without the secret header) | `w3-T1b-alb-direct-blocked.png` | ✅ |
+| T29b | WAF also protects the **web app** (CloudFront → ALB) | `curl -G <app_url> --data-urlencode "id=1' OR '1'='1"` | `403` | `w3-T29b-app-sqli.png` | ✅ |
+| T34 | **Private DNS** + end-to-end **health check** | from web via SSM: `getent hosts db.secnet.internal`; Route 53 health check on the app CloudFront URL (HTTPS) | `10.0.x.x`; health checkers Success | `w3-3.1-route53.png`, `w3-3.1-health-check.png` | ✅ |
 
 ## Week 4: detection and incident response (drill IR-001)
 

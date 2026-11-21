@@ -14,3 +14,22 @@ variable "blocked_countries" {
   type        = list(string)
   default     = ["KP"]
 }
+
+variable "enable_app" {
+  description = "Put the web app (ALB) behind a second CloudFront distribution with the same WAF"
+  type        = bool
+  default     = false
+}
+
+variable "alb_dns_name" {
+  description = "ALB DNS name (app origin)"
+  type        = string
+  default     = null
+}
+
+variable "origin_verify_secret" {
+  description = "Secret header value sent to the ALB origin"
+  type        = string
+  default     = null
+  sensitive   = true
+}

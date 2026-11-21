@@ -29,3 +29,22 @@ variable "instance_type" {
   type        = string
   default     = "t3.micro"
 }
+
+variable "cloudfront_only" {
+  description = "Week 3: only CloudFront may reach the ALB (prefix list in the SG + secret header on the listener)"
+  type        = bool
+  default     = false
+}
+
+variable "cloudfront_prefix_list_id" {
+  description = "AWS managed prefix list com.amazonaws.global.cloudfront.origin-facing"
+  type        = string
+  default     = null
+}
+
+variable "origin_verify_secret" {
+  description = "Value CloudFront sends in X-Origin-Verify; the ALB answers 403 without it"
+  type        = string
+  default     = null
+  sensitive   = true
+}

@@ -21,10 +21,23 @@ resource "aws_security_group" "rds" {
   tags        = { Name = "${var.name}-rds-sg" }
 }
 
+# Week 1: HTTP from the internet. Week 3 (cloudfront_only): only CloudFront's origin-facing
+# IP ranges, so nobody can bypass CloudFront + WAF (AWS: "Restricting access to ALBs").
 resource "aws_vpc_security_group_ingress_rule" "alb_http" {
+  count             = var.cloudfront_only ? 0 : 1
   security_group_id = aws_security_group.alb.id
-  description       = "HTTP from the internet (lab). Production: HTTPS 443 + ACM cert."
+  description       = "HTTP from the internet (Week 1 only; Week 3 puts CloudFront in front)"
   cidr_ipv4         = "0.0.0.0/0"
+  from_port         = 80
+  to_port           = 80
+  ip_protocol       = "tcp"
+}
+
+resource "aws_vpc_security_group_ingress_rule" "alb_from_cloudfront" {
+  count             = var.cloudfront_only ? 1 : 0
+  security_group_id = aws_security_group.alb.id
+  description       = "HTTP from CloudFront origin-facing servers only"
+  prefix_list_id    = var.cloudfront_prefix_list_id
   from_port         = 80
   to_port           = 80
   ip_protocol       = "tcp"

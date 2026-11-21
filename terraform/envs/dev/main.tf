@@ -35,6 +35,22 @@ module "compute" {
   vpc_id             = module.vpc.vpc_id
   public_subnet_ids  = module.vpc.public_subnet_ids
   private_subnet_ids = module.vpc.private_subnet_ids
+  # Week 3: CloudFront + WAF in front of the ALB; the ALB accepts nothing else
+  cloudfront_only           = var.enable_edge
+  cloudfront_prefix_list_id = data.aws_ec2_managed_prefix_list.cloudfront.id
+  origin_verify_secret      = var.enable_edge ? random_password.origin_verify[0].result : null
+}
+
+# AWS-managed list of CloudFront's origin-facing IP ranges
+data "aws_ec2_managed_prefix_list" "cloudfront" {
+  name = "com.amazonaws.global.cloudfront.origin-facing"
+}
+
+# Shared secret between CloudFront and the ALB (stored only in the encrypted state)
+resource "random_password" "origin_verify" {
+  count   = var.enable_edge ? 1 : 0
+  length  = 32
+  special = false
 }
 
 # ---------------- Week 2: spokes, peering, TGW, VPN (Member 3) ----------------
@@ -76,10 +92,13 @@ module "monitoring" {
 
 # ---------------- Week 3: CloudFront + S3 + WAF (Member 4) ----------------
 module "edge" {
-  count             = var.enable_edge ? 1 : 0
-  source            = "../../modules/edge"
-  name              = var.name
-  blocked_countries = var.waf_blocked_countries
+  count                = var.enable_edge ? 1 : 0
+  source               = "../../modules/edge"
+  name                 = var.name
+  blocked_countries    = var.waf_blocked_countries
+  enable_app           = var.enable_compute
+  alb_dns_name         = one(module.compute[*].alb_dns_name)
+  origin_verify_secret = random_password.origin_verify[0].result
   providers = {
     aws           = aws
     aws.us_east_1 = aws.us_east_1

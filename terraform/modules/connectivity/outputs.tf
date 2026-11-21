@@ -48,3 +48,13 @@ output "vpn_tunnel1_psk" {
   value       = one(aws_vpn_connection.this[*].tunnel1_preshared_key)
   sensitive   = true
 }
+
+output "vpn_tunnel2_address" {
+  description = "AWS side outside IP of tunnel 2 (standby, not configured on strongSwan)"
+  value       = one(aws_vpn_connection.this[*].tunnel2_address)
+}
+
+output "onprem_private_ip" {
+  description = "strongSwan router private IP (office side)"
+  value       = one(aws_instance.strongswan[*].private_ip)
+}

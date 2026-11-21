@@ -51,9 +51,13 @@ variable "enable_vpn" {
 }
 
 variable "enable_edge" {
-  description = "Week 3. CloudFront, S3 site, WAF, Route 53, WAF logging and alarm"
+  description = "Week 3. CloudFront (site + app), S3 site, WAF, Route 53, WAF logging and alarm"
   type        = bool
   default     = false
+  validation {
+    condition     = !var.enable_edge || var.enable_compute
+    error_message = "enable_edge needs enable_compute = true (the app distribution fronts the ALB)."
+  }
 }
 
 variable "enable_ir" {

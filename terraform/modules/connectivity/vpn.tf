@@ -63,33 +63,34 @@ resource "aws_security_group" "strongswan" {
   tags        = { Name = "${var.name}-strongswan-sg" }
 }
 
-# Lab shortcut: IKE/NAT-T/ESP from anywhere. Tighten to the two tunnel outside IPs
-# (aws_vpn_connection.this[0].tunnel1_address / tunnel2_address) once the VPN exists.
-resource "aws_vpc_security_group_ingress_rule" "ike" {
-  count             = var.enable_vpn ? 1 : 0
-  security_group_id = aws_security_group.strongswan[0].id
-  description       = "IKE"
-  cidr_ipv4         = "0.0.0.0/0"
-  from_port         = 500
-  to_port           = 500
-  ip_protocol       = "udp"
+# IPsec (IKE, NAT-T, ESP) only from the two AWS tunnel endpoints, not from the whole internet
+locals {
+  vpn_peers = var.enable_vpn ? {
+    t1 = aws_vpn_connection.this[0].tunnel1_address
+    t2 = aws_vpn_connection.this[0].tunnel2_address
+  } : {}
+  ipsec_ports = {
+    ike  = { proto = "udp", port = 500 }
+    natt = { proto = "udp", port = 4500 }
+  }
+  ipsec_rules = { for p in setproduct(keys(local.vpn_peers), keys(local.ipsec_ports)) : "${p[0]}-${p[1]}" => { peer = p[0], port = p[1] } }
 }
 
-resource "aws_vpc_security_group_ingress_rule" "natt" {
-  count             = var.enable_vpn ? 1 : 0
+resource "aws_vpc_security_group_ingress_rule" "ipsec" {
+  for_each          = local.ipsec_rules
   security_group_id = aws_security_group.strongswan[0].id
-  description       = "IPsec NAT-T"
-  cidr_ipv4         = "0.0.0.0/0"
-  from_port         = 4500
-  to_port           = 4500
-  ip_protocol       = "udp"
+  description       = "${upper(each.value.port)} from AWS tunnel ${each.value.peer}"
+  cidr_ipv4         = "${local.vpn_peers[each.value.peer]}/32"
+  from_port         = local.ipsec_ports[each.value.port].port
+  to_port           = local.ipsec_ports[each.value.port].port
+  ip_protocol       = local.ipsec_ports[each.value.port].proto
 }
 
 resource "aws_vpc_security_group_ingress_rule" "esp" {
-  count             = var.enable_vpn ? 1 : 0
+  for_each          = local.vpn_peers
   security_group_id = aws_security_group.strongswan[0].id
-  description       = "ESP"
-  cidr_ipv4         = "0.0.0.0/0"
+  description       = "ESP from AWS tunnel ${each.key}"
+  cidr_ipv4         = "${each.value}/32"
   ip_protocol       = "50"
 }
 
@@ -178,9 +179,10 @@ resource "aws_vpn_connection" "this" {
   tags                     = { Name = "${var.name}-vpn" }
 }
 
+# Static VPN: the office route is added by hand, and only to the hub's table
 resource "aws_ec2_transit_gateway_route" "to_onprem" {
   count                          = var.enable_vpn ? 1 : 0
   destination_cidr_block         = var.onprem_cidr
   transit_gateway_attachment_id  = aws_vpn_connection.this[0].transit_gateway_attachment_id
-  transit_gateway_route_table_id = aws_ec2_transit_gateway.this.association_default_route_table_id
+  transit_gateway_route_table_id = aws_ec2_transit_gateway_route_table.hub.id
 }

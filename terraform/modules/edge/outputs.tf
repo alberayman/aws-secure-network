@@ -22,3 +22,8 @@ output "web_acl_name" {
   description = "WAF web ACL name (CloudWatch alarm dimension)"
   value       = aws_wafv2_web_acl.site.name
 }
+
+output "app_domain" {
+  description = "CloudFront domain of the web app"
+  value       = one(aws_cloudfront_distribution.app[*].domain_name)
+}

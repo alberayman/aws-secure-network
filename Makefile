@@ -1,7 +1,7 @@
 TF  ?= terraform
 DIR := terraform/envs/dev
 
-.PHONY: help init fmt check plan apply output sleep destroy
+.PHONY: help init fmt check plan apply output demo sleep destroy
 
 help:      ## list targets
 	@grep -E '^[a-z-]+:.*##' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-10s %s\n", $$1, $$2}'
@@ -25,6 +25,9 @@ apply:     ## apply the saved plan
 
 output:    ## print URLs, IDs and IPs
 	$(TF) -chdir=$(DIR) output
+
+demo:      ## run the demo tests (ARGS="--auto", "--only T1,T17", "--week 2", "--with-plan", "--slow")
+	bash scripts/demo-tests.sh $(ARGS)
 
 sleep:     ## end of session: one plan that switches off web tier, NAT, hybrid, VPN, IR (keeps hub, monitoring, edge)
 	bash scripts/sleep.sh

@@ -1,4 +1,5 @@
-# Week 3 (Member 1): private DNS name for the app + a Route 53 health check on the ALB.
+# Week 3 (Member 1): private DNS zone (db.secnet.internal) + an end-to-end Route 53 health check
+# on the public entry point (CloudFront -> WAF -> ALB -> web).
 
 resource "aws_route53_zone" "private" {
   count = var.enable_edge && var.enable_compute ? 1 : 0
@@ -8,25 +9,25 @@ resource "aws_route53_zone" "private" {
   }
 }
 
-resource "aws_route53_record" "app" {
+# Internal-only name for the database: resolves to the RDS private IP, only inside the hub VPC.
+# (The ALB now accepts CloudFront only, so an internal alias to it would be refused.)
+resource "aws_route53_record" "db" {
   count   = var.enable_edge && var.enable_compute ? 1 : 0
   zone_id = aws_route53_zone.private[0].zone_id
-  name    = "app.secnet.internal"
-  type    = "A"
-  alias {
-    name                   = one(module.compute[*].alb_dns_name)
-    zone_id                = one(module.compute[*].alb_zone_id)
-    evaluate_target_health = true
-  }
+  name    = "db.secnet.internal"
+  type    = "CNAME"
+  ttl     = 60
+  records = [one(module.compute[*].db_endpoint)]
 }
 
+# End-to-end health check on the public entry point: CloudFront -> WAF -> ALB -> web server
 resource "aws_route53_health_check" "alb" {
   count             = var.enable_edge && var.enable_compute ? 1 : 0
-  fqdn              = one(module.compute[*].alb_dns_name)
-  port              = 80
-  type              = "HTTP"
+  fqdn              = module.edge[0].app_domain
+  port              = 443
+  type              = "HTTPS"
   resource_path     = "/"
   request_interval  = 30
   failure_threshold = 3
-  tags              = { Name = "${var.name}-alb-health" }
+  tags              = { Name = "${var.name}-app-health" }
 }

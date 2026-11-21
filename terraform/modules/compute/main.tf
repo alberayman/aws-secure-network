@@ -69,7 +69,42 @@ resource "aws_lb_listener" "http" {
   port              = 80
   protocol          = "HTTP"
 
-  default_action {
+  # Week 1: forward everything. Week 3: 403 unless the request carries CloudFront's secret header
+  # (the prefix list alone would also let other people's CloudFront distributions in).
+  dynamic "default_action" {
+    for_each = var.cloudfront_only ? [] : [1]
+    content {
+      type             = "forward"
+      target_group_arn = aws_lb_target_group.web.arn
+    }
+  }
+
+  dynamic "default_action" {
+    for_each = var.cloudfront_only ? [1] : []
+    content {
+      type = "fixed-response"
+      fixed_response {
+        content_type = "text/plain"
+        message_body = "Forbidden"
+        status_code  = "403"
+      }
+    }
+  }
+}
+
+resource "aws_lb_listener_rule" "from_cloudfront" {
+  count        = var.cloudfront_only ? 1 : 0
+  listener_arn = aws_lb_listener.http.arn
+  priority     = 1
+
+  condition {
+    http_header {
+      http_header_name = "X-Origin-Verify"
+      values           = [var.origin_verify_secret]
+    }
+  }
+
+  action {
     type             = "forward"
     target_group_arn = aws_lb_target_group.web.arn
   }
