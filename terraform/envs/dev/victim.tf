@@ -6,8 +6,8 @@ resource "aws_instance" "victim" {
   ami                    = data.aws_ssm_parameter.al2023.value
   instance_type          = "t3.micro"
   subnet_id              = module.vpc.private_subnet_ids[0]
-  vpc_security_group_ids = var.isolate_victim ? [aws_security_group.isolation[0].id] : [module.compute.ec2_sg_id]
-  iam_instance_profile   = module.compute.ec2_profile_name
+  vpc_security_group_ids = var.isolate_victim ? [aws_security_group.isolation[0].id] : [one(module.compute[*].ec2_sg_id)]
+  iam_instance_profile   = one(module.compute[*].ec2_profile_name)
 
   metadata_options {
     http_tokens = "required"
@@ -15,6 +15,11 @@ resource "aws_instance" "victim" {
 
   root_block_device {
     encrypted = true
+  }
+
+  # New builds take the latest AL2023 image; a newer AMI never replaces a running server.
+  lifecycle {
+    ignore_changes = [ami]
   }
 
   tags = {

@@ -1,7 +1,8 @@
 # Copy to terraform.tfvars (git-ignored) and edit.
 alert_email = "team-lead@example.com"
 
-# Week 1 is always on. Switch the rest on week by week:
+# Switch on what the session needs; `make sleep` turns everything costly off.
+enable_compute   = true  # Week 1 web tier (EC2, ALB, RDS)
 enable_nat       = true
 enable_hybrid    = false # Week 2
 enable_vpn       = false # Week 2 (after hybrid works)

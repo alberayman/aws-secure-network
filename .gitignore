@@ -36,3 +36,5 @@ vpn-*.txt
 *.ovpn
 *.crt
 pki/
+sleep.txt
+sleep.tfplan

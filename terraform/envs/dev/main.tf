@@ -29,6 +29,7 @@ module "vpc" {
 
 # ---------------- Week 1: EC2 + ALB + RDS (Members 2 and 4) ----------------
 module "compute" {
+  count              = var.enable_compute ? 1 : 0
   source             = "../../modules/compute"
   name               = var.name
   vpc_id             = module.vpc.vpc_id
@@ -46,7 +47,7 @@ module "connectivity" {
   hub_vpc_cidr               = local.hub_cidr
   hub_tgw_subnet_ids         = module.vpc.tgw_subnet_ids
   hub_private_route_table_id = module.vpc.private_route_table_id
-  instance_profile_name      = module.compute.ec2_profile_name
+  instance_profile_name      = one(module.compute[*].ec2_profile_name)
   spokes                     = local.spoke_cidrs
   onprem_cidr                = local.onprem_cidr
   enable_vpn                 = var.enable_vpn

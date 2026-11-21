@@ -142,6 +142,11 @@ resource "aws_instance" "strongswan" {
     sysctl -p
   EOT
 
+  # New builds take the latest Ubuntu image; a newer AMI never replaces a running server.
+  lifecycle {
+    ignore_changes = [ami]
+  }
+
   tags = { Name = "${var.name}-strongswan" }
 }
 

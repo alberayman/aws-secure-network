@@ -1,26 +1,26 @@
 output "alb_url" {
   description = "Week 1: open in a browser"
-  value       = "http://${module.compute.alb_dns_name}"
+  value       = try("http://${module.compute[0].alb_dns_name}", null)
 }
 
 output "web_instance_id" {
   description = "Week 1: Session Manager target"
-  value       = module.compute.web_instance_id
+  value       = one(module.compute[*].web_instance_id)
 }
 
 output "web_private_ip" {
   description = "Week 1/2: ping target for the test matrix"
-  value       = module.compute.web_private_ip
+  value       = one(module.compute[*].web_private_ip)
 }
 
 output "db_endpoint" {
   description = "Week 1: RDS hostname"
-  value       = module.compute.db_endpoint
+  value       = one(module.compute[*].db_endpoint)
 }
 
 output "db_secret_arn" {
   description = "Week 1: Secrets Manager secret with the DB password"
-  value       = module.compute.db_secret_arn
+  value       = one(module.compute[*].db_secret_arn)
 }
 
 output "logs_bucket" {

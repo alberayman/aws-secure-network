@@ -43,7 +43,7 @@ resource "aws_instance" "spoke" {
   instance_type          = "t3.micro"
   subnet_id              = module.connectivity[0].spoke_subnet_ids[each.key]
   vpc_security_group_ids = [aws_security_group.spoke_test[each.key].id]
-  iam_instance_profile   = module.compute.ec2_profile_name
+  iam_instance_profile   = one(module.compute[*].ec2_profile_name)
 
   metadata_options {
     http_tokens = "required"
@@ -59,6 +59,11 @@ resource "aws_instance" "spoke" {
     echo "Spoke ${upper(each.key)} service" > index.html
     nohup python3 -m http.server 80 >/dev/null 2>&1 &
   EOT
+
+  # New builds take the latest AL2023 image; a newer AMI never replaces a running server.
+  lifecycle {
+    ignore_changes = [ami]
+  }
 
   tags = { Name = "${var.name}-spoke-${each.key}-test" }
 }

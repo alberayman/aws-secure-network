@@ -42,7 +42,7 @@ resource "aws_instance" "mirror_target" {
   instance_type          = "t3.micro" # Nitro: required for Traffic Mirroring
   subnet_id              = module.vpc.private_subnet_ids[0]
   vpc_security_group_ids = [aws_security_group.mirror[0].id]
-  iam_instance_profile   = module.compute.ec2_profile_name
+  iam_instance_profile   = one(module.compute[*].ec2_profile_name)
 
   metadata_options {
     http_tokens = "required"
@@ -57,6 +57,11 @@ resource "aws_instance" "mirror_target" {
     apt-get update
     DEBIAN_FRONTEND=noninteractive apt-get install -y tcpdump suricata
   EOT
+
+  # New builds take the latest Ubuntu image; a newer AMI never replaces a running server.
+  lifecycle {
+    ignore_changes = [ami]
+  }
 
   tags = { Name = "${var.name}-mirror-target" }
 }

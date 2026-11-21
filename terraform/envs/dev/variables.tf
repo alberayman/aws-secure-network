@@ -28,10 +28,20 @@ variable "enable_nat" {
   default     = true
 }
 
+variable "enable_compute" {
+  description = "Week 1 web tier: EC2, ALB, RDS (about $1.70/day). false = sleep (make sleep)."
+  type        = bool
+  default     = true
+}
+
 variable "enable_hybrid" {
   description = "Week 2. Spokes, peering, Transit Gateway, endpoints, PrivateLink, spoke tests"
   type        = bool
   default     = false
+  validation {
+    condition     = !var.enable_hybrid || var.enable_compute
+    error_message = "enable_hybrid needs enable_compute = true (spoke hosts use the web tier's SSM instance profile)."
+  }
 }
 
 variable "enable_vpn" {
@@ -50,6 +60,10 @@ variable "enable_ir" {
   description = "Week 4. Victim instance, evidence snapshot, isolation security group"
   type        = bool
   default     = false
+  validation {
+    condition     = !var.enable_ir || var.enable_compute
+    error_message = "enable_ir needs enable_compute = true (the victim uses the web tier's security group and profile)."
+  }
 }
 
 variable "isolate_victim" {

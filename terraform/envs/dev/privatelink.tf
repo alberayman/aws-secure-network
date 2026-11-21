@@ -104,9 +104,18 @@ resource "aws_vpc_endpoint" "consumer" {
   tags               = { Name = "${var.name}-vpce-privatelink" }
 }
 
+# AWS returns the new endpoint before it can be accepted. Accepting straight away comes back as
+# "unsuccessful: Unavailable" and the provider then waits forever (seen 2026-11-17), so wait first.
+resource "time_sleep" "endpoint_ready" {
+  count           = local.hybrid ? 1 : 0
+  create_duration = "120s"
+  depends_on      = [aws_vpc_endpoint.consumer]
+}
+
 # Provider-side approval, done in code so it is reviewed and logged like any other change.
 resource "aws_vpc_endpoint_connection_accepter" "spoke_b" {
   count                   = local.hybrid ? 1 : 0
   vpc_endpoint_service_id = aws_vpc_endpoint_service.spoke_b[0].id
   vpc_endpoint_id         = aws_vpc_endpoint.consumer[0].id
+  depends_on              = [time_sleep.endpoint_ready]
 }

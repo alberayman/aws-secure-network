@@ -25,6 +25,11 @@ resource "aws_instance" "web" {
     systemctl enable --now nginx
   EOT
 
+  # New builds take the latest AL2023 image; a newer AMI never replaces a running server.
+  lifecycle {
+    ignore_changes = [ami]
+  }
+
   tags = { Name = "${var.name}-web" }
 }
 
