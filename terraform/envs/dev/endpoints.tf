@@ -4,7 +4,7 @@
 data "aws_region" "current" {}
 
 locals {
-  ssm_services = ["ssm", "ssmmessages", "ec2messages"]
+  ssm_services = ["ssm", "ssmmessages", "ec2messages", "logs"] # logs: D14 session logging from the spokes
   endpoint_pairs = local.hybrid ? {
     for pair in setproduct(keys(local.spoke_cidrs), local.ssm_services) :
     "${pair[0]}-${pair[1]}" => { spoke = pair[0], svc = pair[1] }

@@ -71,6 +71,17 @@ All Week 3 tests done (T27–T34, T1b, T29b).
   `fixed-response` left the old `target_group_arn` in state ("will be an error in a future release").
   Works today. Fix: the listener is re-created clean on the next build after `make sleep`; re-check the warning then.
 
+## Project website (site bucket)
+
+Source: `website/` (index.html + the two diagrams), uploaded by `terraform/envs/dev/site_content.tf`
+(etag = MD5, so only changed files are re-uploaded). CloudFront caches for up to a day, so after a
+change invalidate the cache:
+
+```
+aws cloudfront create-invalidation --profile secnet \
+  --distribution-id "$(terraform -chdir=terraform/envs/dev output -raw cloudfront_distribution_id)" --paths "/*"
+```
+
 ## Cost and cleanup
 
 Hours with each switch on, Cost Explorer screenshot, `make sleep` runs.

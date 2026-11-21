@@ -195,3 +195,60 @@ resource "aws_network_acl" "tgw" {
 
   tags = { Name = "${var.name}-tgw-nacl" }
 }
+
+# ---------- D9: isolated data subnets (RDS) ----------
+# Third tier: no route to the internet (no NAT/IGW), not reachable from spokes or the office
+# (no route back), and a NACL that only admits MySQL from the app (private) subnets.
+resource "aws_subnet" "data" {
+  count             = length(var.data_subnet_cidrs)
+  vpc_id            = aws_vpc.this.id
+  cidr_block        = var.data_subnet_cidrs[count.index]
+  availability_zone = var.azs[count.index]
+  tags              = { Name = "${var.name}-data-${count.index + 1}", Tier = "data" }
+}
+
+resource "aws_route_table" "data" {
+  count  = length(var.data_subnet_cidrs) > 0 ? 1 : 0
+  vpc_id = aws_vpc.this.id
+  tags   = { Name = "${var.name}-data-rt" } # local route only, on purpose
+}
+
+resource "aws_route_table_association" "data" {
+  count          = length(aws_subnet.data)
+  subnet_id      = aws_subnet.data[count.index].id
+  route_table_id = aws_route_table.data[0].id
+}
+
+resource "aws_network_acl" "data" {
+  count      = length(var.data_subnet_cidrs) > 0 ? 1 : 0
+  vpc_id     = aws_vpc.this.id
+  subnet_ids = aws_subnet.data[*].id
+
+  # MySQL only, only from the app tier
+  dynamic "ingress" {
+    for_each = var.private_subnet_cidrs
+    content {
+      rule_no    = 100 + ingress.key
+      protocol   = "tcp"
+      action     = "allow"
+      cidr_block = ingress.value
+      from_port  = 3306
+      to_port    = 3306
+    }
+  }
+
+  # Replies back to the app tier (NACLs are stateless)
+  dynamic "egress" {
+    for_each = var.private_subnet_cidrs
+    content {
+      rule_no    = 100 + egress.key
+      protocol   = "tcp"
+      action     = "allow"
+      cidr_block = egress.value
+      from_port  = 1024
+      to_port    = 65535
+    }
+  }
+
+  tags = { Name = "${var.name}-data-nacl" }
+}

@@ -1,0 +1,20 @@
+Secure AWS Network – demo tests   2026-11-21 19:29
+reading terraform outputs …
+
+How to read the results
+  200 = page served OK   403 = refused by a security rule (WAF / bucket policy / ALB)
+  000 = no answer at all (a firewall dropped the connection)   ping FAIL = no network path
+  ❌ next to Expected means we WANT it to be blocked – a block is a PASS.
+  Commands are shortened for reading; the exact code is in scripts/demo-tests.sh.
+stack: web i-08a08b9eb949195eb · spokes on · VPN on · edge on
+
+━━━ T46 · Misconfigurations are detected continuously ━━━
+  Proves:   AWS Config re-checks every security group on each change (T7, automated – D11)
+  Runs on:  AWS API
+  Command:  aws configservice describe-compliance-by-config-rule (default SG closed · no SSH from internet)
+  Expected: restricted-ssh: COMPLIANT
+  Result:   default-sg-closed: NON_COMPLIANT · restricted-ssh: COMPLIANT   ✔ PASS
+
+Summary: 1 passed · 0 failed · 0 skipped
+Manual drills (they change something): T6 drift, T21b NACL deny, T32 geo-block, T33 WAF alarm email, T35–T41 incident, T50 GuardDuty sample finding → email, T51 session log review.
+Log: demo-run-20261121-1929.log

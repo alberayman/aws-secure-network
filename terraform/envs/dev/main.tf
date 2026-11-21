@@ -25,6 +25,7 @@ module "vpc" {
   enable_nat           = var.enable_nat
   extra_allowed_cidrs  = local.hybrid ? concat(values(local.spoke_cidrs), [local.onprem_cidr]) : []
   tgw_subnet_cidrs     = local.hybrid ? ["10.0.254.0/28", "10.0.254.16/28"] : []
+  data_subnet_cidrs    = ["10.0.21.0/24", "10.0.22.0/24"] # D9
 }
 
 # ---------------- Week 1: EC2 + ALB + RDS (Members 2 and 4) ----------------
@@ -35,6 +36,7 @@ module "compute" {
   vpc_id             = module.vpc.vpc_id
   public_subnet_ids  = module.vpc.public_subnet_ids
   private_subnet_ids = module.vpc.private_subnet_ids
+  db_subnet_ids      = module.vpc.data_subnet_ids # D9
   # Week 3: CloudFront + WAF in front of the ALB; the ALB accepts nothing else
   cloudfront_only           = var.enable_edge
   cloudfront_prefix_list_id = data.aws_ec2_managed_prefix_list.cloudfront.id

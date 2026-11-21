@@ -143,3 +143,34 @@ output "network_alerts_topic" {
   description = "Week 4: SNS topic for network alarms (confirm the email subscription)"
   value       = module.monitoring.network_alerts_topic_arn
 }
+
+# ---------- Week 4 security layers (D9-D15), read by scripts/demo-tests.sh ----------
+output "data_route_table_id" {
+  description = "D9: route table of the isolated data subnets (local route only)"
+  value       = module.vpc.data_route_table_id
+}
+
+output "guardduty_detector_id" {
+  description = "D10: GuardDuty detector (null when enable_detection = false)"
+  value       = one(aws_guardduty_detector.this[*].id)
+}
+
+output "findings_topic_arn" {
+  description = "D13: SNS topic for GuardDuty findings"
+  value       = one(aws_sns_topic.findings[*].arn)
+}
+
+output "dns_firewall_rule_group_id" {
+  description = "D12: DNS Firewall rule group"
+  value       = aws_route53_resolver_firewall_rule_group.this.id
+}
+
+output "ssm_session_log_group" {
+  description = "D14: CloudWatch log group with every Session Manager session"
+  value       = aws_cloudwatch_log_group.ssm_sessions.name
+}
+
+output "cloudfront_distribution_id" {
+  description = "Site distribution ID (for cache invalidation after a website update)"
+  value       = try(module.edge[0].cloudfront_distribution_id, null)
+}

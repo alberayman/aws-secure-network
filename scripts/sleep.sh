@@ -10,6 +10,7 @@ terraform plan -no-color -out sleep.tfplan \
   -var enable_nat=false \
   -var enable_hybrid=false \
   -var enable_vpn=false \
+  -var enable_edge=false \
   -var enable_client_vpn=false \
   -var enable_ir=false \
   -var enable_mirroring=false | tee sleep.txt
@@ -18,7 +19,7 @@ grep -E "^Plan:" sleep.txt
 read -r -p "Apply this plan (only destroys expected)? [y/N] " ok
 if [[ "$ok" == "y" ]]; then
   terraform apply sleep.tfplan
-  echo "Sleeping: web tier, NAT, spokes, TGW, VPN, Client VPN and IR hosts removed. Hub VPC, monitoring, CloudTrail, budget and edge stay."
+  echo "Sleeping: web tier, NAT, spokes, TGW, VPN, Client VPN and IR hosts removed. Edge (CloudFront, WAF, private DNS) removed too. Hub VPC, monitoring, CloudTrail and budget stay."
 else
   echo "Nothing changed."
 fi

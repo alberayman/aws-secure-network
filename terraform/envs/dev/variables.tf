@@ -114,6 +114,28 @@ variable "client_vpn_cidr" {
 }
 
 # ---------- Week 4: CloudWatch network detection ----------
+variable "enable_detection" {
+  description = "Week 4 (D10, D11, D13, D15): GuardDuty, AWS Config rules, Security Hub, IAM Access Analyzer, finding alerts. Account-wide services: turn off on clean-up day"
+  type        = bool
+  default     = false
+}
+
+variable "dns_firewall_managed_list_ids" {
+  description = "D12: IDs of AWS managed DNS Firewall domain lists (malware, botnet C2) in this Region"
+  type        = list(string)
+  default     = []
+}
+
+variable "dns_firewall_managed_action" {
+  description = "D12: ALERT first (watch for false positives), then BLOCK"
+  type        = string
+  default     = "ALERT"
+  validation {
+    condition     = contains(["ALERT", "BLOCK"], var.dns_firewall_managed_action)
+    error_message = "ALERT or BLOCK."
+  }
+}
+
 variable "reject_alarm_threshold" {
   description = "Rejected flows in 5 minutes (hub VPC) before the network alarm fires"
   type        = number

@@ -40,3 +40,9 @@ variable "tgw_subnet_cidrs" {
   type        = list(string)
   default     = []
 }
+
+variable "data_subnet_cidrs" {
+  description = "D9: isolated data-tier subnets (RDS). Local route only, own NACL."
+  type        = list(string)
+  default     = []
+}

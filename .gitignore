@@ -42,3 +42,6 @@ demo-run-*.log
 
 # one-off drill plans
 geo-plan.txt
+
+# Python bytecode (diagram scripts)
+__pycache__/

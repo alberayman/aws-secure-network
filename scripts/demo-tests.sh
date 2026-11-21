@@ -88,6 +88,14 @@ explain() {
     T1b) echo "$LAPTOP|curl -m 6 $ALB   (skip CloudFront, go to the load balancer directly)" ;;
     T29b) echo "$LAPTOP|curl \"${APP}?id=1' OR '1'='1\"   (SQL injection against the web app)" ;;
     T34) echo "$VIA_SSM the web server + AWS API|getent hosts db.secnet.internal  +  aws route53 get-health-check-status" ;;
+    T42) echo "AWS API|dig $DB (which subnet?)  +  aws ec2 describe-route-tables $DATART → count 0.0.0.0/0 routes" ;;
+    T43) echo "$VIA_SSM the office router|open a TCP connection to $DB port 3306   (office → database)" ;;
+    T44) echo "AWS API|aws guardduty get-detector --detector-id $GD → Status" ;;
+    T45) echo "$VIA_SSM the web server|DNS lookup of c2.evil-demo.example (on our blocklist) and of aws.amazon.com (normal)" ;;
+    T46) echo "AWS API|aws configservice describe-compliance-by-config-rule (default SG closed · no SSH from internet)" ;;
+    T47) echo "AWS API|aws securityhub get-enabled-standards  +  aws accessanalyzer list-analyzers" ;;
+    T48) echo "AWS API|aws ssm get-document --name SSM-SessionManagerRunShell → where are sessions logged?" ;;
+    T49) echo "AWS API|aws s3api get-bucket-policy (site + logs) → deny non-TLS?  +  RDS parameter require_secure_transport" ;;
     *)   echo "|" ;;
   esac
 }
@@ -128,6 +136,7 @@ HUBVPC=$(out hub_vpc_id); SA=$(out spoke_a_instance_id); SB=$(out spoke_b_instan
 SAIP=$(out spoke_a_ip); SBIP=$(out spoke_b_ip); SW=$(out strongswan_instance_id); SWIP=$(out strongswan_private_ip)
 VPN=$(out vpn_connection_id); PL=$(out privatelink_dns); CF=$(out cloudfront_url); BUCKET=$(out site_bucket)
 HC=$(out alb_health_check_id); APP=$(out app_url)
+DATART=$(out data_route_table_id); GD=$(out guardduty_detector_id); SSMLOG=$(out ssm_session_log_group)
 # Week 3 puts CloudFront in front of the ALB: the app is then reached only via APP
 ENTRY=${APP:-$ALB}
 onoff() { [ -n "$1" ] && echo on || echo off; }
@@ -223,9 +232,50 @@ t T31 3 "WAF rate limit stops floods" "300 requests from one IP: the rate rule s
 fi
 t T34 3 "Private DNS + end-to-end health check" "db.secnet.internal resolves to a private IP inside the VPC only; Route 53 checkers see CloudFront → ALB → web healthy" "10.0.x.x · health checkers OK: >0" '10\.0\..* health checkers OK: [1-9]' T34 "$HC"
 
+# ---------------- Week 4: extra security layers (D9-D15) ----------------
+DNSCHECK='python3 - <<"PY"
+import socket, struct, random
+def ask(name):
+    q = struct.pack(">HHHHHH", random.randint(0, 65535), 0x0100, 1, 0, 0, 0)
+    q += b"".join(bytes([len(p)]) + p.encode() for p in name.split(".")) + b"\0" + struct.pack(">HH", 1, 1)
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM); s.settimeout(3)
+    s.sendto(q, ("169.254.169.253", 53)); r = s.recv(512)
+    return "BLOCKED" if b"dns-firewall-blocked" in r else ("allowed" if (r[3] & 15) == 0 else "rcode %d" % (r[3] & 15))
+print("c2.evil-demo.example: %s · aws.amazon.com: %s" % (ask("c2.evil-demo.example"), ask("aws.amazon.com")))
+PY'
+T42() { local ip n; ip=$(dig +short "$DB" | tail -1)
+        n=$(aws ec2 describe-route-tables $P --route-table-ids "$DATART" --query 'length(RouteTables[0].Routes[?DestinationCidrBlock==`0.0.0.0/0`])' --output text)
+        echo "db $ip · internet routes: $n"; }
+T43() { ssm_run "$SW" "timeout 4 bash -c '</dev/tcp/$DB/3306' 2>/dev/null && echo 'port 3306 OPEN' || echo 'port 3306 CLOSED'"; }
+T44() { aws guardduty get-detector $P --detector-id "$GD" --query Status --output text | sed 's/^/GuardDuty /'; }
+T45() { ssm_run "$WEB" "$DNSCHECK"; }
+T46() { local a b
+        a=$(aws configservice describe-compliance-by-config-rule $P --config-rule-names secnet-default-sg-closed --query 'ComplianceByConfigRules[0].Compliance.ComplianceType' --output text)
+        b=$(aws configservice describe-compliance-by-config-rule $P --config-rule-names secnet-restricted-ssh --query 'ComplianceByConfigRules[0].Compliance.ComplianceType' --output text)
+        echo "default-sg-closed: $a · restricted-ssh: $b"; }
+T47() { local st an
+        st=$(aws securityhub get-enabled-standards $P --query 'length(StandardsSubscriptions[?StandardsStatus==`READY`])' --output text 2>/dev/null)
+        an=$(aws accessanalyzer list-analyzers $P --type ACCOUNT --query 'analyzers[0].status' --output text 2>/dev/null)
+        echo "Security Hub standards READY: ${st:-0} · Access Analyzer: $an"; }
+T48() { aws ssm get-document $P --name SSM-SessionManagerRunShell --query Content --output text | grep -q "$SSMLOG" && echo "sessions logged to $SSMLOG" || echo "session logging NOT configured"; }
+T49() { local n=0 b v
+        for b in "$BUCKET" "$(out logs_bucket)"; do aws s3api get-bucket-policy $P --bucket "$b" --query Policy --output text 2>/dev/null | grep -q '"aws:SecureTransport":"false"' && n=$((n+1)); done
+        v=$(aws rds describe-db-parameters $P --db-parameter-group-name secnet-mysql84-tls --query "Parameters[?ParameterName=='require_secure_transport'].ParameterValue" --output text 2>/dev/null)
+        echo "buckets denying non-TLS: $n of 2 · RDS require_secure_transport=$v"; }
+
+t T42 4 "Database in isolated data subnets" "RDS sits in its own subnets whose route table has no way to the internet (D9)" "db 10.0.21/22.x · internet routes: 0" '^db 10\.0\.2[12]\..* internet routes: 0$' T42 "$DATART"
+t T43 4 "Office cannot reach the database" "VPN users reach the hub, never the data tier: no route back + data NACL (D9)" "port 3306 CLOSED ❌" 'CLOSED' T43 "$SW" "$DATART"
+t T5 4 "…but the app tier still can (regression)" "web → RDS :3306 still works after moving the DB" "port 3306 OPEN" 'OPEN' T5 "$WEB" "$DB"
+t T44 4 "Threat detection is on" "GuardDuty analyses CloudTrail, VPC Flow Logs and DNS queries (D10)" "GuardDuty ENABLED" 'ENABLED' T44 "$GD"
+t T45 4 "DNS Firewall blocks bad domains" "a server cannot look up a domain on the blocklist, even though NAT allows outbound (D12)" "c2.evil-demo.example: BLOCKED ❌ · aws.amazon.com: allowed" 'evil-demo.example: BLOCKED .* allowed' T45 "$WEB"
+t T46 4 "Misconfigurations are detected continuously" "AWS Config re-checks every security group on each change (T7, automated – D11)" "default-sg-closed: COMPLIANT · restricted-ssh: COMPLIANT" '^default-sg-closed: COMPLIANT .* restricted-ssh: COMPLIANT$' T46 "$GD"
+t T47 4 "One security dashboard" "Security Hub runs the AWS best-practice checks; Access Analyzer flags external access (D13, D15)" "standards READY: 1 · Access Analyzer: ACTIVE" 'READY: 1 .* ACTIVE' T47 "$GD"
+t T48 4 "Every admin session is recorded" "Session Manager streams each shell (who, when, every command) to CloudWatch (D14)" "sessions logged to /secnet/ssm-sessions" '^sessions logged to' T48 "$SSMLOG"
+t T49 4 "Encryption in transit is mandatory" "S3 refuses plain HTTP; MySQL refuses clients without TLS (D15)" "2 of 2 · require_secure_transport=1" '2 of 2 .*=1$' T49 "$BUCKET"
+
 # ---------------- summary ----------------
 say ""
 say "${B}Summary:${N} ${G}$PASS passed${N} · ${R}$FAIL failed${N} · ${Y}$SKIP skipped${N}${FAILED:+   failed:$FAILED}"
-say "${D}Manual drills (they change something): T6 drift, T21b NACL deny, T32 geo-block, T33 WAF alarm email, T35–T41 incident.${N}"
+say "${D}Manual drills (they change something): T6 drift, T21b NACL deny, T32 geo-block, T33 WAF alarm email, T35–T41 incident, T50 GuardDuty sample finding → email, T51 session log review.${N}"
 say "${D}Log: $LOG${N}"
 [ "$FAIL" = 0 ]

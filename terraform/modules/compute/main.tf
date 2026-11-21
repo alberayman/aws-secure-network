@@ -111,14 +111,28 @@ resource "aws_lb_listener_rule" "from_cloudfront" {
 }
 
 # ---------- RDS MySQL, private, encrypted, password in Secrets Manager ----------
+# D9: RDS lives in the isolated data subnets. The name change replaces the subnet group, and
+# replace_triggered_by below re-creates the (empty, lab) DB in it: no in-place VPC-subnet move.
 resource "aws_db_subnet_group" "this" {
-  name       = "${var.name}-db-subnets"
-  subnet_ids = var.private_subnet_ids
+  name       = "${var.name}-db-isolated"
+  subnet_ids = length(var.db_subnet_ids) > 0 ? var.db_subnet_ids : var.private_subnet_ids
+}
+
+# D15: encryption in transit is mandatory (clients without TLS are refused)
+resource "aws_db_parameter_group" "this" {
+  name   = "${var.name}-mysql84-tls"
+  family = "mysql8.4"
+  parameter {
+    name  = "require_secure_transport"
+    value = "1"
+  }
 }
 
 resource "aws_db_instance" "this" {
   identifier                  = "${var.name}-db"
   engine                      = "mysql"
+  engine_version              = "8.4" # 8.0 left standard support in 2026 (extended support costs extra)
+  parameter_group_name        = aws_db_parameter_group.this.name
   instance_class              = "db.t3.micro"
   allocated_storage           = 20
   db_name                     = "appdb"
@@ -132,4 +146,8 @@ resource "aws_db_instance" "this" {
   backup_retention_period     = 1
   deletion_protection         = false # lab only
   skip_final_snapshot         = true  # lab only
+
+  lifecycle {
+    replace_triggered_by = [aws_db_subnet_group.this]
+  }
 }

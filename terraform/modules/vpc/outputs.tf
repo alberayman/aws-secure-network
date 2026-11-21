@@ -32,3 +32,13 @@ output "tgw_subnet_ids" {
   description = "Week 2: dedicated /28 subnets for the Transit Gateway attachment (empty when hybrid is off)"
   value       = aws_subnet.tgw[*].id
 }
+
+output "data_subnet_ids" {
+  description = "D9 isolated data subnets"
+  value       = aws_subnet.data[*].id
+}
+
+output "data_route_table_id" {
+  description = "D9 data route table (local route only)"
+  value       = one(aws_route_table.data[*].id)
+}

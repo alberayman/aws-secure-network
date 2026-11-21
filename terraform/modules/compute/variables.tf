@@ -48,3 +48,9 @@ variable "origin_verify_secret" {
   default     = null
   sensitive   = true
 }
+
+variable "db_subnet_ids" {
+  description = "D9: isolated data subnets for RDS (falls back to the private subnets if empty)"
+  type        = list(string)
+  default     = []
+}

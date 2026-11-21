@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Secure AWS Network</title>
+<meta name="description" content="DEPI graduation project: a secure AWS network with hybrid connectivity, edge protection, detection and incident response, built with Terraform.">
+<style>
+  :root {
+    --bg: #f7f8fa; --surface: #ffffff; --ink: #16191f; --muted: #545b64; --line: #e3e6ea;
+    --accent: #8c4fff; --accent-soft: #f2ecff; --ok: #1d8102; --warn: #b54708; --edge: #ed7100;
+    --net: #147eba; --detect: #dd344c;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1216; --surface: #171b21; --ink: #e8eaed; --muted: #a3abb5; --line: #2a3038;
+      --accent: #b18cff; --accent-soft: #241c3a; --ok: #5bc236; --warn: #f0a24a; --edge: #ff9a3c;
+      --net: #4fa8e0; --detect: #ff6b7f;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+         font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  a { color: var(--accent); }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 16px; }
+  header { background: var(--surface); border-bottom: 1px solid var(--line); }
+  header .wrap { padding-top: 56px; padding-bottom: 48px; }
+  .eyebrow { font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 0 0 12px; }
+  h1 { font-size: clamp(30px, 5vw, 46px); line-height: 1.15; margin: 0 0 16px; letter-spacing: -.01em; }
+  .lead { font-size: 19px; color: var(--muted); max-width: 760px; margin: 0; }
+  .live { margin-top: 28px; display: inline-flex; gap: 10px; align-items: center; padding: 10px 14px;
+          border: 1px solid var(--line); border-radius: 10px; background: var(--accent-soft); font-size: 14.5px; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--ok); flex: none; }
+  nav { position: sticky; top: 0; z-index: 2; background: color-mix(in srgb, var(--bg) 92%, transparent);
+        backdrop-filter: blur(6px); border-bottom: 1px solid var(--line); }
+  nav .wrap { display: flex; gap: 18px; overflow-x: auto; padding-top: 10px; padding-bottom: 10px; font-size: 14.5px; }
+  nav a { color: var(--muted); text-decoration: none; white-space: nowrap; }
+  nav a:hover { color: var(--ink); }
+  section { padding: 56px 0 8px; }
+  h2 { font-size: 26px; margin: 0 0 8px; }
+  .sub { color: var(--muted); margin: 0 0 24px; max-width: 760px; }
+  .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 20px; }
+  .card h3 { margin: 0 0 6px; font-size: 17px; }
+  .card p, .card li { color: var(--muted); font-size: 15px; margin: 0; }
+  .card ul { margin: 8px 0 0; padding-left: 18px; }
+  .tag { display: inline-block; font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 99px;
+         margin-bottom: 10px; border: 1px solid currentColor; }
+  .w1 { color: var(--net); } .w2 { color: var(--accent); } .w3 { color: var(--edge); } .w4 { color: var(--detect); }
+  .flow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 15px; }
+  .flow span.node { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; }
+  .flow span.arrow { color: var(--muted); }
+  figure { margin: 0 0 24px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+  figure img { display: block; width: 100%; height: auto; background: #fff; }
+  figcaption { padding: 10px 16px; font-size: 14px; color: var(--muted); border-top: 1px solid var(--line); }
+  table { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--line);
+          border-radius: 12px; overflow: hidden; font-size: 15px; }
+  th, td { text-align: left; padding: 12px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: 13px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+  tr:last-child td { border-bottom: 0; }
+  .table-wrap { overflow-x: auto; }
+  .ok { color: var(--ok); font-weight: 600; } .warn { color: var(--warn); font-weight: 600; }
+  .stats { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); margin-bottom: 24px; }
+  .stat { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; }
+  .stat b { display: block; font-size: 30px; line-height: 1.1; }
+  .stat span { color: var(--muted); font-size: 14px; }
+  footer { margin-top: 64px; border-top: 1px solid var(--line); background: var(--surface); }
+  footer .wrap { padding-top: 24px; padding-bottom: 32px; color: var(--muted); font-size: 14px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <p class="eyebrow">DEPI graduation project · Group ONL5_ISS11_G1 · AWS Security track</p>
+    <h1>Secure AWS Network Architecture &amp; Hybrid Connectivity</h1>
+    <p class="lead">A company network on AWS designed so that every connection is deliberate, every layer can stop an attacker on its own, and every action is recorded. Built entirely with Terraform in the eu-west-1 (Ireland) Region.</p>
+    <div class="live"><span class="dot"></span> You are reading this page through CloudFront and AWS WAF, from a private S3 bucket that cannot be opened directly.</div>
+  </div>
+</header>
+
+<nav>
+  <div class="wrap">
+    <a href="#why">Why</a><a href="#this-page">This page</a><a href="#architecture">Architecture</a>
+    <a href="#features">What it does</a><a href="#layers">Security layers</a><a href="#proof">Proof</a>
+    <a href="#how">How we work</a><a href="#next">Production next steps</a>
+  </div>
+</nav>
+
+<main class="wrap">
+
+  <section id="why">
+    <h2>Why this project</h2>
+    <p class="sub">Companies moving to the cloud need more than servers that work. They need a network that keeps attackers out, connects the office safely, and shows quickly when something goes wrong.</p>
+    <div class="grid">
+      <div class="card"><h3>Keep attackers out</h3><p>Nothing important has a public IP. The internet reaches the application only through the edge, and every tier only accepts traffic from the tier in front of it.</p></div>
+      <div class="card"><h3>Connect safely</h3><p>The office, other VPCs and private services connect over encrypted or private paths, with segmentation so one connection cannot be used to reach everything.</p></div>
+      <div class="card"><h3>See and respond</h3><p>Every API call and network flow is recorded. Alarms and threat detection email the team, and a runbook isolates a compromised server in minutes.</p></div>
+      <div class="card"><h3>Repeatable and controlled</h3><p>All infrastructure is code. Every change is planned, reviewed, approved and logged before it touches AWS.</p></div>
+    </div>
+  </section>
+
+  <section id="this-page">
+    <h2>How this page reaches you</h2>
+    <p class="sub">This website is itself part of the demonstration: it is served by the same edge that protects the web application.</p>
+    <div class="flow">
+      <span class="node">Your browser</span><span class="arrow">→ HTTPS →</span>
+      <span class="node">CloudFront (nearest edge location)</span><span class="arrow">→</span>
+      <span class="node">AWS WAF: managed rules, rate limit, geo-blocking</span><span class="arrow">→ Origin Access Control →</span>
+      <span class="node">Private S3 bucket (encrypted, versioned)</span>
+    </div>
+    <p class="sub" style="margin-top:16px">Opening the bucket directly returns <b>403 Forbidden</b>. A SQL-injection or cross-site-scripting attempt against this page is blocked at the edge before it reaches the bucket.</p>
+  </section>
+
+  <section id="architecture">
+    <h2>Architecture</h2>
+    <p class="sub">A hub VPC with three network tiers, two spoke VPCs, a simulated office connected over IPsec VPN, an edge layer in front, and a security and monitoring layer across everything.</p>
+    <figure>
+      <a href="architecture.png"><img src="architecture.png" alt="Architecture diagram: edge (CloudFront and WAF), hub VPC with public, private and isolated data tiers, spoke VPCs over peering and Transit Gateway, simulated office over Site-to-Site VPN, PrivateLink service, and the security and monitoring layer." loading="lazy"></a>
+      <figcaption>Architecture diagram (select to open full size).</figcaption>
+    </figure>
+    <figure>
+      <a href="traffic-flows.png"><img src="traffic-flows.png" alt="Traffic flow diagram: each allowed flow left to right with ports, and the paths that are blocked on purpose." loading="lazy"></a>
+      <figcaption>Traffic flows: who talks to whom, through what, on which port, and what is blocked on purpose.</figcaption>
+    </figure>
+  </section>
+
+  <section id="features">
+    <h2>What it does</h2>
+    <p class="sub">Delivered in four stages. Each stage adds capabilities on top of the previous one.</p>
+    <div class="grid">
+      <div class="card"><span class="tag w1">Stage 1 · Secure foundation</span><h3>Hub VPC and 3-tier network</h3>
+        <ul><li>Public, private and isolated data subnets across 2 Availability Zones</li>
+        <li>Load balancer → web server → MySQL database, each tier locked to the previous one</li>
+        <li>Admin shell through Session Manager: no SSH keys, no open ports</li>
+        <li>CloudTrail, VPC Flow Logs and a monthly budget alert</li></ul></div>
+      <div class="card"><span class="tag w2">Stage 2 · Hybrid connectivity</span><h3>Office, spokes and private services</h3>
+        <ul><li>Site-to-Site IPsec VPN from a simulated office</li>
+        <li>Transit Gateway with separate route tables for segmentation</li>
+        <li>VPC peering (and proof that it is not transitive)</li>
+        <li>PrivateLink: one service on one port, no routing between networks</li>
+        <li>VPC endpoints so private servers need no internet</li></ul></div>
+      <div class="card"><span class="tag w3">Stage 3 · Edge protection</span><h3>CloudFront, WAF and DNS</h3>
+        <ul><li>CloudFront in front of both this site and the web application</li>
+        <li>AWS WAF: managed rule sets, rate limiting, geo-blocking, alarms</li>
+        <li>The load balancer accepts only CloudFront, so the edge cannot be bypassed</li>
+        <li>Private DNS zone and an end-to-end health check</li></ul></div>
+      <div class="card"><span class="tag w4">Stage 4 · Detection &amp; response</span><h3>Know quickly, act quickly</h3>
+        <ul><li>GuardDuty threat detection and Security Hub best-practice checks</li>
+        <li>AWS Config rules that re-check security groups on every change</li>
+        <li>DNS Firewall blocking malware and botnet domains</li>
+        <li>Recorded admin sessions, Athena investigations, isolation runbook</li></ul></div>
+    </div>
+  </section>
+
+  <section id="layers">
+    <h2>Defence in depth</h2>
+    <p class="sub">An attacker has to defeat several independent layers. Each one is enforced by AWS, not by convention.</p>
+    <div class="table-wrap"><table>
+      <tr><th>Layer</th><th>Controls</th></tr>
+      <tr><td>Edge</td><td>CloudFront (HTTPS), AWS WAF, AWS Shield Standard, load balancer reachable from CloudFront only</td></tr>
+      <tr><td>Network</td><td>Security groups chained tier to tier, network ACLs, Transit Gateway segmentation, isolated database subnets, no public IPs on servers</td></tr>
+      <tr><td>Egress</td><td>Outbound through NAT only, DNS Firewall against known-bad domains, S3 through a gateway endpoint</td></tr>
+      <tr><td>Host</td><td>IMDSv2 only, no SSH, Session Manager with every session recorded</td></tr>
+      <tr><td>Data</td><td>Encryption at rest (RDS, S3) and in transit (S3 refuses plain HTTP, MySQL requires TLS), database password in Secrets Manager</td></tr>
+      <tr><td>Identity</td><td>MFA, least-privilege instance roles, IAM Access Analyzer</td></tr>
+      <tr><td>Detection</td><td>CloudTrail (all Regions), VPC Flow Logs (every VPC), CloudWatch alarms, GuardDuty, AWS Config, Security Hub</td></tr>
+      <tr><td>Response</td><td>Email alerts through SNS, Athena queries for investigation, one-switch isolation of a compromised server</td></tr>
+    </table></div>
+  </section>
+
+  <section id="proof">
+    <h2>Proof, not promises</h2>
+    <p class="sub">Every claim on this page is checked by an automated test suite that runs against the live environment and explains each test in plain words.</p>
+    <div class="stats">
+      <div class="stat"><b>27 / 27</b><span>automated tests passing (stages 1–3, full regression)</span></div>
+      <div class="stat"><b>4</b><span>VPCs, all with active flow logs</span></div>
+      <div class="stat"><b>0</b><span>security groups open to SSH from the internet</span></div>
+      <div class="stat"><b>1</b><span>way into the application: through CloudFront and WAF</span></div>
+    </div>
+    <div class="table-wrap"><table>
+      <tr><th>Example test</th><th>Expected</th><th>Result</th></tr>
+      <tr><td>Open the database port from the internet</td><td>Blocked</td><td class="ok">Pass</td></tr>
+      <tr><td>Go straight to the load balancer, skipping CloudFront</td><td>No answer</td><td class="ok">Pass</td></tr>
+      <tr><td>Send a SQL-injection attack to the web application</td><td>403 from WAF</td><td class="ok">Pass</td></tr>
+      <tr><td>Flood the site with 300 requests from one address</td><td>Rate limit starts blocking</td><td class="ok">Pass</td></tr>
+      <tr><td>Reach the second spoke through the peered spoke</td><td>No route (peering is not transitive)</td><td class="ok">Pass</td></tr>
+      <tr><td>Reach a restricted spoke from the office VPN</td><td>No route (segmentation)</td><td class="ok">Pass</td></tr>
+      <tr><td>Block visitors from a country (live drill)</td><td>403, then 200 after revert</td><td class="ok">Pass</td></tr>
+      <tr><td>Stage 4 layers (GuardDuty, Config, DNS Firewall, TLS, isolated data tier)</td><td>Each layer verified</td><td class="warn">Being added</td></tr>
+    </table></div>
+  </section>
+
+  <section id="how">
+    <h2>How we work</h2>
+    <div class="grid">
+      <div class="card"><h3>Infrastructure as code</h3><p>Terraform modules for the network, compute, connectivity, edge and monitoring, with state stored in an encrypted, versioned S3 bucket.</p></div>
+      <div class="card"><h3>Change control</h3><p>No change without a reviewed plan, an explicit approval and an entry in the change log. Drills that change something are reverted and logged too.</p></div>
+      <div class="card"><h3>Cost control</h3><p>Expensive parts sit behind switches. One command puts the environment to sleep overnight while monitoring and audit logs stay on.</p></div>
+      <div class="card"><h3>Evidence</h3><p>Every test and drill is captured as evidence, with public IPs and secrets removed before anything is stored.</p></div>
+    </div>
+  </section>
+
+  <section id="next">
+    <h2>Production next steps</h2>
+    <p class="sub">Lab trade-offs we made on purpose, and what a production deployment would add.</p>
+    <div class="table-wrap"><table>
+      <tr><th>Lab choice</th><th>Production design</th></tr>
+      <tr><td>One NAT gateway, one web server, single-AZ database</td><td>NAT per Availability Zone, Auto Scaling across 2 AZs, RDS Multi-AZ</td></tr>
+      <tr><td>One VPN tunnel configured</td><td>Both tunnels, ideally two customer gateways</td></tr>
+      <tr><td>CloudFront to load balancer over HTTP</td><td>Certificate on the load balancer, or CloudFront VPC origins with an internal load balancer</td></tr>
+      <tr><td>Security groups and NACLs for inspection</td><td>AWS Network Firewall in a central inspection VPC</td></tr>
+      <tr><td>Logs in the same account</td><td>Separate log-archive account with S3 Object Lock</td></tr>
+      <tr><td>IAM user with MFA</td><td>IAM Identity Center with short-lived credentials</td></tr>
+      <tr><td>Office cannot resolve private DNS names</td><td>Route 53 Resolver inbound and outbound endpoints</td></tr>
+    </table></div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    Digital Egypt Pioneers Initiative (DEPI) · AWS Security track · Group ONL5_ISS11_G1 · 2026<br>
+    Lab environment for education. It may be switched off outside demonstration hours.
+  </div>
+</footer>
+
+</body>
+</html>
