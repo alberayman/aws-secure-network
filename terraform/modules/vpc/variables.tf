@@ -46,3 +46,9 @@ variable "data_subnet_cidrs" {
   type        = list(string)
   default     = []
 }
+
+variable "quarantine_cidrs" {
+  description = "Week 4 containment: host /32s denied in and out by the private NACL (stateless: also cuts open connections)"
+  type        = list(string)
+  default     = []
+}

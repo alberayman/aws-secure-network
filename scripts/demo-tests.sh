@@ -95,6 +95,7 @@ explain() {
     T46) echo "AWS API|aws configservice describe-compliance-by-config-rule (default SG closed · no SSH from internet)" ;;
     T47) echo "AWS API|aws securityhub get-enabled-standards  +  aws accessanalyzer list-analyzers" ;;
     T48) echo "AWS API|aws ssm get-document --name SSM-SessionManagerRunShell → where are sessions logged?" ;;
+    T39) echo "AWS API + $VIA_SSM the web server|victim SG name + NACL deny for $VIP/32 + ping $VIP from web + website through CloudFront" ;;
     T49) echo "AWS API|aws s3api get-bucket-policy (site + logs) → deny non-TLS?  +  RDS parameter require_secure_transport" ;;
     *)   echo "|" ;;
   esac
@@ -136,6 +137,7 @@ HUBVPC=$(out hub_vpc_id); SA=$(out spoke_a_instance_id); SB=$(out spoke_b_instan
 SAIP=$(out spoke_a_ip); SBIP=$(out spoke_b_ip); SW=$(out strongswan_instance_id); SWIP=$(out strongswan_private_ip)
 VPN=$(out vpn_connection_id); PL=$(out privatelink_dns); CF=$(out cloudfront_url); BUCKET=$(out site_bucket)
 HC=$(out alb_health_check_id); APP=$(out app_url)
+VICTIM=$(out victim_instance_id); VIP=$(out victim_private_ip); QUAR=$(out victim_isolated)
 DATART=$(out data_route_table_id); GD=$(out guardduty_detector_id); SSMLOG=$(out ssm_session_log_group)
 # Week 3 puts CloudFront in front of the ALB: the app is then reached only via APP
 ENTRY=${APP:-$ALB}
@@ -271,6 +273,13 @@ t T45 4 "DNS Firewall blocks bad domains" "a server cannot look up a domain on t
 t T46 4 "Misconfigurations are detected continuously" "AWS Config re-checks every security group on each change (T7, automated – D11)" "default-sg-closed: COMPLIANT · restricted-ssh: COMPLIANT" '^default-sg-closed: COMPLIANT .* restricted-ssh: COMPLIANT$' T46 "$GD"
 t T47 4 "One security dashboard" "Security Hub runs the AWS best-practice checks; Access Analyzer flags external access (D13, D15)" "standards READY: 1 · Access Analyzer: ACTIVE" 'READY: 1 .* ACTIVE' T47 "$GD"
 t T48 4 "Every admin session is recorded" "Session Manager streams each shell (who, when, every command) to CloudWatch (D14)" "sessions logged to /secnet/ssm-sessions" '^sessions logged to' T48 "$SSMLOG"
+T39() { local sg nd pg site
+        sg=$(aws ec2 describe-instances $P --instance-ids "$VICTIM" --query 'Reservations[0].Instances[0].SecurityGroups[].GroupName' --output text)
+        nd=$(aws ec2 describe-network-acls $P --filters Name=tag:Name,Values=secnet-private-nacl --query "length(NetworkAcls[0].Entries[?RuleAction=='deny' && CidrBlock=='$VIP/32'])" --output text)
+        pg=$(ssm_run "$WEB" "$(ping_cmd "$VIP")")
+        site=$(curl -s -o /dev/null -m 10 -w "%{http_code}" "$ENTRY")
+        echo "victim SG: $sg · NACL deny rules: $nd · web→victim $pg · website $site"; }
+t T39 4 "Compromised host is contained, site stays up" "quarantine SG (no rules) + NACL deny in/out (cuts tracked connections); the rest keeps working" "SG secnet-isolation · NACL deny 2 · ping FAIL · website 200" 'secnet-isolation .* deny rules: 2 .* ping FAIL .* website 200$' T39 "$VICTIM" "$QUAR"
 t T49 4 "Encryption in transit is mandatory" "S3 refuses plain HTTP; MySQL refuses clients without TLS (D15)" "2 of 2 · require_secure_transport=1" '2 of 2 .*=1$' T49 "$BUCKET"
 
 # ---------------- summary ----------------

@@ -32,6 +32,46 @@ hybrid DNS (Resolver endpoints), Network Firewall inspection VPC, log-archive ac
 HTTPS origin / VPC origins, IAM Identity Center, KMS CMK for logs, WAF Bot Control, Shield Advanced,
 VPC Block Public Access.
 
+## Incident scenario IR-001: compromised web-tier server
+
+| Phase | What happens | Tool / evidence | Test |
+|---|---|---|---|
+| Build | `enable_ir = true`: victim EC2 in the hub private subnet (web-tier SG + role), quarantine SG, baseline snapshot | plan / change log | – |
+| Attack | `make ir-simulate`: port scan of Spoke A → 10 SSH attempts → C2 DNS lookup (GuardDuty test domain) → blocked exfil domain | `docs/incidents/IR-001-timeline.md` | T35 |
+| Detect | CloudWatch alarms (spoke_a rejected flows, SSH) + GuardDuty high finding → emails | alarm + finding emails | T36 |
+| Investigate | Athena 11 (port 22), 12 (port scan), 14 (victim timeline); GuardDuty finding details | query results | T37 |
+| Preserve | EBS snapshot tagged `Case=IR-001`, `Phase=pre-containment` **before** containment | snapshot ID | T38 |
+| Contain | `isolate_victim = true`: quarantine SG (no rules) **+ NACL deny in/out** for the victim /32 (a SG swap does not cut tracked connections; a NACL does) | plan / apply | T39 (automated) |
+| Audit | CloudTrail: `ModifyNetworkInterfaceAttribute`, `ReplaceNetworkAclEntry` by secnet-lab | CloudTrail events | T40 |
+| Recover | evidence kept, victim rebuilt or removed from code (`enable_ir = false`) | plan / apply | – |
+| Lessons | e.g. web and victim share one IAM role → revoking sessions would also hit the web server | runbook lessons table | – |
+
+### IR-001 rehearsal result (2026-11-21): all phases done
+
+| Test | Result |
+|---|---|
+| T35 attack leaves traces | scan 0/80 open, SSH 0/10, C2 lookup, exfil domain BLOCKED ✅ |
+| T36 automatic detection | 3 alarms in ~1 min, GuardDuty sev 8 on the victim in ~3 min, all emailed ✅ |
+| T37 investigation | Athena 12: 10.0.11.222 → 10.1.1.46, 80 ports; query 15 timeline from 20:12:42 ✅ |
+| T38 evidence before containment | snap-055cac4e403b6e6d9 at 20:42:02, completed, kept ✅ |
+| T39 containment, site up | SG secnet-isolation + 2 NACL denies, ping FAIL, website 200 ✅ |
+| T40 audited | CreateTags, ModifyNetworkInterfaceAttribute, 2 × CreateNetworkAclEntry by secnet-lab ✅ |
+| Recover | rebuilt from code, infected instance terminated ✅ |
+
+Full timeline: `../incidents/IR-001-timeline.md` · lessons: `../runbooks/ir-runbook.md` · evidence: `../evidence/week4/w4-T3*`, `w4-T40*`.
+
+### Rehearsal measurements (2026-11-21, T0 = 20:12:17 UTC)
+
+| Detection | Fired at | After the action |
+|---|---|---|
+| Spoke A rejected-flows alarm (80 rejects) | 20:13:53 | ~1 min after the scan |
+| Hub + Spoke A SSH alarms | 20:13:56 / 20:14:01 | ~40 s after the SSH attempts |
+| GuardDuty Backdoor:EC2/C&CActivity.B!DNS (sev 8) on the victim, email | 20:17 | ~3 min after the C2 lookup |
+| Alarms back to OK | 20:18:53 | by themselves once traffic stopped |
+
+Demo timing: alarms and GuardDuty were both in the inbox ≈5 min after T0. The alarms return to OK after
+≈5 min, so in the demo show the emails / alarm history, not only the current state.
+
 ## What we built
 
 ## Tests (command · expected · actual)

@@ -89,6 +89,32 @@ resource "aws_network_acl" "private" {
   vpc_id     = aws_vpc.this.id
   subnet_ids = aws_subnet.private[*].id
 
+  # Week 4 containment: quarantined hosts are denied first (lowest rule numbers win).
+  # A security group swap does not cut connections that are already tracked; a NACL deny does.
+  dynamic "ingress" {
+    for_each = var.quarantine_cidrs
+    content {
+      rule_no    = 10 + ingress.key
+      protocol   = "-1"
+      action     = "deny"
+      cidr_block = ingress.value
+      from_port  = 0
+      to_port    = 0
+    }
+  }
+
+  dynamic "egress" {
+    for_each = var.quarantine_cidrs
+    content {
+      rule_no    = 10 + egress.key
+      protocol   = "-1"
+      action     = "deny"
+      cidr_block = egress.value
+      from_port  = 0
+      to_port    = 0
+    }
+  }
+
   # Anything inside the hub VPC (ALB health checks, EC2 to RDS, endpoints)
   ingress {
     rule_no    = 100

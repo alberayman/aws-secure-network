@@ -26,6 +26,8 @@ module "vpc" {
   extra_allowed_cidrs  = local.hybrid ? concat(values(local.spoke_cidrs), [local.onprem_cidr]) : []
   tgw_subnet_cidrs     = local.hybrid ? ["10.0.254.0/28", "10.0.254.16/28"] : []
   data_subnet_cidrs    = ["10.0.21.0/24", "10.0.22.0/24"] # D9
+  # Week 4 containment (IR-001): NACL deny for the victim, on top of the quarantine SG
+  quarantine_cidrs = var.enable_ir && var.isolate_victim ? ["${aws_instance.victim[0].private_ip}/32"] : []
 }
 
 # ---------------- Week 1: EC2 + ALB + RDS (Members 2 and 4) ----------------

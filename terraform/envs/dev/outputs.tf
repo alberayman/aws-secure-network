@@ -174,3 +174,8 @@ output "cloudfront_distribution_id" {
   description = "Site distribution ID (for cache invalidation after a website update)"
   value       = try(module.edge[0].cloudfront_distribution_id, null)
 }
+
+output "victim_isolated" {
+  description = "Week 4: set when isolate_victim = true (demo test T39 runs only then)"
+  value       = var.enable_ir && var.isolate_victim ? "yes" : null
+}
