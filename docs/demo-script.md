@@ -24,12 +24,16 @@ port 22 on the PrivateLink endpoint (blocked, but counted). Not an incident: rul
 |---|---|---|---|
 | 0–2 | Problem + "a server has just been compromised; we will come back to it" | `make ir-simulate ARGS=--auto` | attack traffic; timeline written |
 | 2–5 | Architecture + traffic-flow diagrams; the website itself is served by the edge we built | website tab | alarms fire at ~min 3–4 |
-| 5–17 | Weeks 1–3 live: `make demo ARGS="--week 1"`, then `--week 2`, then `--week 3` (explain Runs on / Command / Expected) | terminal | GuardDuty finding at ~min 5–8 |
+| 5–17 | **Full project test, live:** `make demo` (interactive: Enter before each test, so you can explain *Proves / Runs on / Command / Expected*; all 35 tests across the four stages). Short on time: `make demo ARGS="--auto"` runs all of them in ≈4 min while you talk over the output | terminal | GuardDuty finding at ~min 5–8 |
 | 17–20 | **Detect:** alarm emails (3) + GuardDuty email (sev 8, victim instance ID) | inbox, GuardDuty console | – |
 | 20–23 | **Investigate:** Athena saved query **15** (replace X with `output -raw victim_private_ip`) | Athena | – |
 | 23–25 | **Preserve:** evidence snapshot with tags `Case=IR-001`, `Phase=pre-containment` | CLI (runbook) | – |
 | 25–28 | **Contain:** `isolate_victim = true` → plan → yes → apply; `make demo ARGS="--only T39"` | terminal | – |
 | 28–30 | **Audit + lessons:** CloudTrail events; lessons table; production next steps | CloudTrail, runbook | – |
+
+During the full run, **T39 shows SKIP** (the victim is not isolated yet); it is run on its own after containment.
+The full run also triggers the `secnet-hub-ssh-attempt` alarm (T21 probes port 22): point it out as the
+"rule out your own activity" triage step, next to the real IR-001 alarms (Spoke A rejected flows, GuardDuty).
 
 After the demo: `isolate_victim = false`, then `make sleep`.
 
