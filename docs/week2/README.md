@@ -4,14 +4,14 @@ Guide: [`docs/guides/`](../guides/) · Evidence: [`docs/evidence/week2/`](../evi
 
 ## Deliverables
 
-| Deliverable | Member(s) | Status | Link |
-|---|---|---|---|
-| Hub-and-spoke / TGW diagram | 1 Taghride | Not started | |
-| Peering + endpoint setup | 3 Mohamed, 4 Asmaa | Not started | |
-| VPN configuration (no secrets) | 3 Mohamed | Not started | |
-| Route table documentation | 1 Taghride | Not started | |
-| Hybrid connectivity test report | 2 Ahlam | Not started | |
-| Client VPN lab + Direct Connect design (booklet task) | 3 Mohamed, 4 Asmaa | Not started | |
+| Deliverable | Status | Link |
+|---|---|---|
+| Hub-and-spoke / TGW diagram | Done | [architecture.png](../architecture/architecture.png), [traffic-flows.png](../architecture/traffic-flows.png) |
+| Peering + endpoint setup | Done (console lab + Terraform) | [`modules/connectivity`](../../terraform/modules/connectivity), [`endpoints.tf`](../../terraform/envs/dev/endpoints.tf), [`privatelink.tf`](../../terraform/envs/dev/privatelink.tf) |
+| VPN configuration (no secrets) | Done; automated with `make vpn-setup` (key in Parameter Store) | [`vpn.tf`](../../terraform/modules/connectivity/vpn.tf), [`vpn-office-setup.sh`](../../scripts/vpn-office-setup.sh) |
+| Route table documentation | Done | [route-tables.md](../architecture/route-tables.md), [terraform-design.md](terraform-design.md) |
+| Hybrid connectivity test report | Done (T14–T21, T26, automated) | [demo-test-plan.md](../demo-test-plan.md) |
+| Client VPN + Direct Connect design | Design only (not deployed) – in the final report | [final-report.md](../final-report.md) |
 
 ## What we built
 

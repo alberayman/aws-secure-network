@@ -278,11 +278,21 @@ resource "aws_iam_role_policy" "session_logging" {
 # Found by the Config rule secnet-default-sg-closed (NON_COMPLIANT, 2026-11-21): the account's
 # default VPC (outside the project) still had AWS's built-in allow-self / allow-all-egress rules.
 # Managing it here with no rule blocks strips them and keeps it closed (CIS 5.4). Nothing uses it.
-data "aws_vpc" "default" {
-  default = true
+# Works in accounts without a default VPC too (then nothing is managed).
+data "aws_vpcs" "default" {
+  filter {
+    name   = "isDefault"
+    values = ["true"]
+  }
 }
 
 resource "aws_default_security_group" "default_vpc" {
-  vpc_id = data.aws_vpc.default.id
+  count  = length(data.aws_vpcs.default.ids) > 0 ? 1 : 0
+  vpc_id = data.aws_vpcs.default.ids[0]
   tags   = { Name = "default-vpc-default-sg-do-not-use", ManagedBy = "terraform-secnet" }
+}
+
+moved {
+  from = aws_default_security_group.default_vpc
+  to   = aws_default_security_group.default_vpc[0]
 }

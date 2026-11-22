@@ -71,6 +71,8 @@ scripts/          sleep (cost saving) helper
 
 ## How to run
 
+> **New here?** Follow [docs/guides/run-in-your-own-account.md](docs/guides/run-in-your-own-account.md): clone, connect your own AWS account, build in four stages, run every test, then switch it off.
+
 ```bash
 cd terraform/envs/dev
 cp terraform.tfvars.example terraform.tfvars    # set alert_email, then switch weeks on

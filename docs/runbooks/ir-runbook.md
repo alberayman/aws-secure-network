@@ -1,6 +1,6 @@
 # Incident response runbook: compromised EC2 instance (case IR-001)
 
-Owner: Member 5 – Ahmed (with Member 4 – Asmaa for containment). Steps and commands: Guide 4.
+Steps and commands: Guide 4 and `docs/demo-script.md`.
 All times in **UTC**.
 
 | Phase | Who | What | How (console / CLI) | Evidence produced |
@@ -16,7 +16,7 @@ All times in **UTC**.
 
 | Time (UTC) | Event | Source | By |
 |---|---|---|---|
-| T0 | simulation starts | Member 2 notes | |
+| T0 | simulation starts | `make ir-simulate` | |
 | | | | |
 
 ## Chain of custody

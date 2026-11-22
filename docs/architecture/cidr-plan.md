@@ -15,8 +15,12 @@ Non-overlapping ranges are what make peering, TGW and VPN routing possible.
 |---|---|---|---|---|---|
 | Hub | secnet-public-1 | eu-west-1a | 10.0.1.0/24 | public | ALB, NAT |
 | Hub | secnet-public-2 | eu-west-1b | 10.0.2.0/24 | public | ALB |
-| Hub | secnet-private-1 | eu-west-1a | 10.0.11.0/24 | private | web EC2, RDS, TGW ENI, endpoints, victim |
-| Hub | secnet-private-2 | eu-west-1b | 10.0.12.0/24 | private | RDS standby subnet, TGW ENI |
+| Hub | secnet-private-1 | eu-west-1a | 10.0.11.0/24 | private (app) | web EC2, PrivateLink endpoint, IR victim |
+| Hub | secnet-private-2 | eu-west-1b | 10.0.12.0/24 | private (app) | spare app subnet (second AZ) |
+| Hub | secnet-data-1 | eu-west-1a | 10.0.21.0/24 | data (isolated, D9) | RDS MySQL |
+| Hub | secnet-data-2 | eu-west-1b | 10.0.22.0/24 | data (isolated, D9) | RDS subnet group (second AZ) |
+| Hub | secnet-tgw-1 | eu-west-1a | 10.0.254.0/28 | TGW attachment | TGW ENI (own subnet so the private NACL filters TGW traffic) |
+| Hub | secnet-tgw-2 | eu-west-1b | 10.0.254.16/28 | TGW attachment | TGW ENI |
 | Spoke A | secnet-spoke-a-subnet | eu-west-1a | 10.1.1.0/24 | private | test instance, SSM endpoints |
 | Spoke B | secnet-spoke-b-subnet | eu-west-1a | 10.2.1.0/24 | private | test instance, NLB, SSM endpoints, TGW ENI |
 | Office | secnet-onprem-subnet | eu-west-1a | 192.168.1.0/24 | public | strongSwan router |

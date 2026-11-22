@@ -4,15 +4,15 @@ Guide: [`docs/guides/`](../guides/) · Evidence: [`docs/evidence/week1/`](../evi
 
 ## Deliverables
 
-| Deliverable | Member(s) | Status | Link |
-|---|---|---|---|
-| VPC design | 1 Taghride | Console lab 1.1 done by Alber (2026-10-05); Terraform pending | [resource map](../evidence/week1/w1-1.1-console-resource-map.png) |
-| Subnet / CIDR plan | 1 Taghride | Not started | |
-| EC2 / ALB / RDS deployment | 2 Ahlam | Not started | |
-| SG / NACL rules matrix | 4 Asmaa | Private NACL + default SG done in console lab 1.1 by Alber; full matrix pending | [NACL rules](../evidence/week1/w1-1.1-nacl-rules-Inbound.png) |
-| Architecture diagram | 1 Taghride | Not started | |
-| Connectivity test results | 2 Ahlam | Not started | |
-| Bastion vs SSM comparison (extra, answers "bastion/SSM access") | 4 Asmaa, 2 Ahlam | Comparison written by Alber 2026-10-11 from build evidence; optional bastion lab not run | [bastion-vs-ssm.md](bastion-vs-ssm.md) |
+| Deliverable | Status | Link |
+|---|---|---|
+| VPC design | Done (console lab + Terraform) | [architecture](../architecture/architecture.png), [`modules/vpc`](../../terraform/modules/vpc) |
+| Subnet / CIDR plan | Done | [cidr-plan.md](../architecture/cidr-plan.md) |
+| EC2 / ALB / RDS deployment | Done (console lab + Terraform; RDS later moved to isolated data subnets, D9) | [`modules/compute`](../../terraform/modules/compute), [evidence](../evidence/week1/) |
+| SG / NACL rules matrix | Done | [traffic flows](../architecture/traffic-flows.png), [route tables](../architecture/route-tables.md) |
+| Architecture diagram | Done | [architecture.png](../architecture/architecture.png) |
+| Connectivity test results | Done (T1–T13, automated) | [demo-test-plan.md](../demo-test-plan.md), [regression log](../evidence/regression-2026-11-22-dnsfw-block.log) |
+| Bastion vs SSM comparison | Done | [bastion-vs-ssm.md](bastion-vs-ssm.md) |
 
 ## What we built
 

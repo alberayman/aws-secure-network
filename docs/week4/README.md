@@ -4,13 +4,13 @@ Guide: [`docs/guides/`](../guides/) · Evidence: [`docs/evidence/week4/`](../evi
 
 ## Deliverables
 
-| Deliverable | Member(s) | Status | Link |
-|---|---|---|---|
-| Flow log queries | 5 Ahmed | Not started | |
-| Detection use cases (Athena + CloudWatch alarms) | 5 Ahmed | Not started | |
-| Compromised-instance IR runbook | 5 Ahmed, 4 Asmaa | Not started | |
-| Evidence collection notes | 2 Ahlam, 5 Ahmed | Not started | |
-| Final secure network report | 6 Alber | Not started | |
+| Deliverable | Status | Link |
+|---|---|---|
+| Flow log queries | Done (Athena saved queries 10–15) | [`athena.tf`](../../terraform/modules/monitoring/athena.tf) |
+| Detection use cases (Athena + CloudWatch alarms) | Done (alarms, GuardDuty, Config, Security Hub, DNS Firewall) | [`security_layers.tf`](../../terraform/envs/dev/security_layers.tf), [`cloudwatch.tf`](../../terraform/modules/monitoring/cloudwatch.tf) |
+| Compromised-instance IR runbook | Done + rehearsed (IR-001) | [ir-runbook.md](../runbooks/ir-runbook.md), [IR-001 timeline](../incidents/IR-001-timeline.md) |
+| Evidence collection notes | Done (snapshot before containment, chain of custody) | [ir-runbook.md](../runbooks/ir-runbook.md) |
+| Final secure network report | In progress | [final-report.md](../final-report.md) |
 
 ## Design review (2026-11-21): extra security layers for the Week 4 build
 

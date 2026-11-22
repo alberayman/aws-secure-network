@@ -4,13 +4,13 @@ Guide: [`docs/guides/`](../guides/) · Evidence: [`docs/evidence/week3/`](../evi
 
 ## Deliverables
 
-| Deliverable | Member(s) | Status | Link |
-|---|---|---|---|
-| CloudFront + S3 lab | 4 Asmaa, 2 Ahlam | Not started | |
-| WAF rule set | 4 Asmaa | Not started | |
-| DDoS mitigation plan | 4 Asmaa | Not started | |
-| Edge architecture | 1 Taghride | Not started | |
-| Route 53 / health check design | 1 Taghride | Not started | |
+| Deliverable | Status | Link |
+|---|---|---|
+| CloudFront + S3 lab | Done (site + app distributions; project website live) | [`modules/edge`](../../terraform/modules/edge), [website](../../website/) |
+| WAF rule set | Done (managed rules, rate limit, geo-block; drills T29–T33) | [`modules/edge/main.tf`](../../terraform/modules/edge/main.tf) |
+| DDoS mitigation plan | In the final report | [final-report.md](../final-report.md) |
+| Edge architecture | Done (D8: CloudFront-only ALB) | see "Design decision D8" below |
+| Route 53 / health check design | Done (private zone, end-to-end health check, T34) | [`dns.tf`](../../terraform/envs/dev/dns.tf) |
 
 ## What we built
 

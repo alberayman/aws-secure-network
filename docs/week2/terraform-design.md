@@ -85,5 +85,7 @@ Trade-off: tunnel 2 stays down (no failover in the lab; production uses both tun
 Automating it with an SSM document that reads the PSK from Parameter Store was considered and
 postponed: faster demo-day rebuild, but more to debug.
 
+> **Superseded 2026-11-22:** automated with `make vpn-setup` – the router has its own IAM role and reads the tunnel key from Parameter Store (SecureString), so no secret is typed or passed in a command. See Week 4 README, "Problems".
+
 Expected new tests: T17 office ↔ hub over IPsec, T18 office → Spoke B fails (no TGW route, Spoke B SG
 allows it), Spoke B → office fails, tunnel 1 UP / tunnel 2 DOWN in the console.
