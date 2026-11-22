@@ -124,8 +124,8 @@ resource "aws_instance" "strongswan" {
   subnet_id                   = aws_subnet.onprem[0].id
   vpc_security_group_ids      = [aws_security_group.strongswan[0].id]
   iam_instance_profile        = aws_iam_instance_profile.strongswan[0].name # own role (least privilege)
-  associate_public_ip_address = true  # needed at boot for apt; the EIP replaces it after
-  source_dest_check           = false # it routes traffic for other hosts
+  associate_public_ip_address = true                                        # needed at boot for apt; the EIP replaces it after
+  source_dest_check           = false                                       # it routes traffic for other hosts
 
   metadata_options {
     http_tokens = "required"
