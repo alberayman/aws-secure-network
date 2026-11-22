@@ -67,7 +67,6 @@ module "connectivity" {
   hub_vpc_cidr               = local.hub_cidr
   hub_tgw_subnet_ids         = module.vpc.tgw_subnet_ids
   hub_private_route_table_id = module.vpc.private_route_table_id
-  instance_profile_name      = one(module.compute[*].ec2_profile_name)
   spokes                     = local.spoke_cidrs
   onprem_cidr                = local.onprem_cidr
   enable_vpn                 = var.enable_vpn

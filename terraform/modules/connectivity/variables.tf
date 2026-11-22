@@ -29,11 +29,6 @@ variable "hub_private_route_table_id" {
   type        = string
 }
 
-variable "instance_profile_name" {
-  description = "SSM instance profile for the strongSwan router"
-  type        = string
-}
-
 variable "spokes" {
   description = "Spoke VPCs: a = peering, b = Transit Gateway"
   type        = map(string)
