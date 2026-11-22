@@ -50,6 +50,15 @@ locals {
       GROUP BY srcaddr, dstaddr, dstport ORDER BY total_bytes DESC LIMIT 20;
     SQL
 
+    "15-victim-lateral-movement" = <<-SQL
+      -- replace 10.0.11.X with the victim private IP. interface_id shows both sides of each
+      -- attempt: ACCEPT on the source ENI (left the server), REJECT on the target ENI (blocked).
+      SELECT from_unixtime("start") AS time, interface_id, dstaddr, dstport, action, count(*) AS flows
+      FROM vpc_flow_logs
+      WHERE srcaddr = '10.0.11.X' AND (dstaddr LIKE '10.1.%' OR dstaddr LIKE '10.2.%' OR dstaddr LIKE '192.168.%')
+      GROUP BY 1, 2, 3, 4, 5 ORDER BY 1, 4;
+    SQL
+
     "14-host-timeline" = <<-SQL
       -- replace 10.0.11.X with the victim private IP
       SELECT from_unixtime("start") AS time, srcaddr, dstaddr, dstport, action

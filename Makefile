@@ -1,7 +1,7 @@
 TF  ?= terraform
 DIR := terraform/envs/dev
 
-.PHONY: help init fmt check plan apply output demo ir-simulate sleep destroy
+.PHONY: help init fmt check plan apply output demo vpn-setup ir-simulate sleep destroy
 
 help:      ## list targets
 	@grep -E '^[a-z-]+:.*##' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-10s %s\n", $$1, $$2}'
@@ -28,6 +28,9 @@ output:    ## print URLs, IDs and IPs
 
 demo:      ## run the demo tests (ARGS="--auto", "--only T1,T17", "--week 2", "--with-plan", "--slow")
 	bash scripts/demo-tests.sh $(ARGS)
+
+vpn-setup: ## configure the office router (strongSwan tunnel 1) over SSM after a build; key read from Parameter Store
+	bash scripts/vpn-office-setup.sh
 
 ir-simulate: ## Week 4: run the IR-001 attack simulation on the victim (ARGS=--auto for no pauses)
 	bash scripts/ir-simulate.sh $(ARGS)

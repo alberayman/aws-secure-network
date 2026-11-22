@@ -179,3 +179,8 @@ output "victim_isolated" {
   description = "Week 4: set when isolate_victim = true (demo test T39 runs only then)"
   value       = var.enable_ir && var.isolate_victim ? "yes" : null
 }
+
+output "vpn_psk_parameter" {
+  description = "Parameter Store name of the tunnel-1 key, read by the office router (scripts/vpn-office-setup.sh)"
+  value       = try(module.connectivity[0].vpn_psk_parameter, null)
+}

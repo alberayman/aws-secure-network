@@ -123,7 +123,7 @@ resource "aws_instance" "strongswan" {
   instance_type               = "t3.micro"
   subnet_id                   = aws_subnet.onprem[0].id
   vpc_security_group_ids      = [aws_security_group.strongswan[0].id]
-  iam_instance_profile        = var.instance_profile_name
+  iam_instance_profile        = aws_iam_instance_profile.strongswan[0].name # own role (least privilege)
   associate_public_ip_address = true  # needed at boot for apt; the EIP replaces it after
   source_dest_check           = false # it routes traffic for other hosts
 
@@ -185,4 +185,47 @@ resource "aws_ec2_transit_gateway_route" "to_onprem" {
   destination_cidr_block         = var.onprem_cidr
   transit_gateway_attachment_id  = aws_vpn_connection.this[0].transit_gateway_attachment_id
   transit_gateway_route_table_id = aws_ec2_transit_gateway_route_table.hub.id
+}
+
+# ---------- Office router: own IAM role + tunnel key in Parameter Store ----------
+# The router gets its own role (lesson from IR-001: one role per workload). It may read ONLY the
+# tunnel-1 pre-shared key, so scripts/vpn-office-setup.sh can configure strongSwan over SSM
+# without the key ever appearing in a command, a chat or the repo.
+resource "aws_ssm_parameter" "vpn_psk" {
+  count       = var.enable_vpn ? 1 : 0
+  name        = "/${var.name}/vpn/tunnel1-psk"
+  description = "Site-to-Site VPN tunnel 1 pre-shared key (read by the office router only)"
+  type        = "SecureString" # encrypted with the AWS managed key aws/ssm
+  value       = aws_vpn_connection.this[0].tunnel1_preshared_key
+}
+
+resource "aws_iam_role" "strongswan" {
+  count = var.enable_vpn ? 1 : 0
+  name  = "${var.name}-strongswan-role"
+  assume_role_policy = jsonencode({
+    Version   = "2012-10-17"
+    Statement = [{ Effect = "Allow", Action = "sts:AssumeRole", Principal = { Service = "ec2.amazonaws.com" } }]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "strongswan_ssm" {
+  count      = var.enable_vpn ? 1 : 0
+  role       = aws_iam_role.strongswan[0].name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+}
+
+resource "aws_iam_role_policy" "strongswan_psk" {
+  count = var.enable_vpn ? 1 : 0
+  name  = "read-tunnel1-psk"
+  role  = aws_iam_role.strongswan[0].id
+  policy = jsonencode({
+    Version   = "2012-10-17"
+    Statement = [{ Effect = "Allow", Action = "ssm:GetParameter", Resource = aws_ssm_parameter.vpn_psk[0].arn }]
+  })
+}
+
+resource "aws_iam_instance_profile" "strongswan" {
+  count = var.enable_vpn ? 1 : 0
+  name  = "${var.name}-strongswan-profile"
+  role  = aws_iam_role.strongswan[0].name
 }

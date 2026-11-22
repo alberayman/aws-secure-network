@@ -58,3 +58,8 @@ output "onprem_private_ip" {
   description = "strongSwan router private IP (office side)"
   value       = one(aws_instance.strongswan[*].private_ip)
 }
+
+output "vpn_psk_parameter" {
+  description = "Parameter Store name of the tunnel-1 key (SecureString)"
+  value       = one(aws_ssm_parameter.vpn_psk[*].name)
+}

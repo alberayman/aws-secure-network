@@ -22,7 +22,7 @@ Defence-in-depth review of the whole design. Rule: build only what is cheap, low
 | D9 | Network / data | Isolated DB subnets 10.0.21.0/24 + 10.0.22.0/24: local route only, own NACL (3306 from app subnets + return ports) | Built ✅ |
 | D10 | Detection | GuardDuty (VPC flow, DNS, CloudTrail analysis) | Built ✅ |
 | D11 | Detection / compliance | AWS Config rules: default SG closed, no SSH from 0.0.0.0/0 (continuous T7) | Built ✅ |
-| D12 | Egress / DNS | Route 53 Resolver DNS Firewall on hub + spokes: AWS managed malware/botnet lists + own blocklist | Built ✅ |
+| D12 | Egress / DNS | Route 53 Resolver DNS Firewall on hub + spokes: AWS managed malware/botnet lists (**BLOCK** since 2026-11-22, after a clean regression in ALERT) + own blocklist | Built ✅ |
 | D13 | Detection / response | Security Hub (best-practice checks) + GuardDuty finding → EventBridge → SNS email | Built ✅ |
 | D14 | Host / audit | Session Manager session logging (commands) to S3 / CloudWatch | Built ✅ |
 | D15 | Data in transit | S3 bucket policies deny non-TLS; RDS `require_secure_transport`; IAM Access Analyzer | Built ✅ |
@@ -98,6 +98,11 @@ Full regression after the Week 4 build (2026-11-21 19:16 UTC, Weeks 1–4): **35
 (`../evidence/regression-2026-11-21-weeks1-4.log`). T2/T34 now resolve the DB to 10.0.21.x (isolated tier).
 
 ## Problems and how we fixed them
+
+- **Office router lost its VPN config on every rebuild** (manual strongSwan setup over Session Manager). Fixed
+  2026-11-22: router has its own IAM role, the tunnel key is in Parameter Store (SecureString, readable only by
+  that role), and `make vpn-setup` configures tunnel 1 over SSM. First run: tunnel1 ESTABLISHED, AWS 1 UP;
+  T17/T18 PASS. The key never appears in a command, CloudTrail, terminal or the repo.
 
 - **Config finding (detect → fix → verify):** `secnet-default-sg-closed` flagged `sg-0383255b9acb5d03e`, the default SG
   of the account's default VPC (outside the project; built-in allow-self / allow-all-egress rules). Fixed in code with

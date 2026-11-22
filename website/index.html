@@ -131,7 +131,7 @@
     <p class="sub">Delivered in four stages. Each stage adds capabilities on top of the previous one.</p>
     <div class="grid">
       <div class="card"><span class="tag w1">Stage 1 · Secure foundation</span><h3>Hub VPC and 3-tier network</h3>
-        <ul><li>Public, private and isolated data subnets across 2 Availability Zones</li>
+        <ul><li>Public, private (app) and isolated data subnets across 2 Availability Zones</li>
         <li>Load balancer → web server → MySQL database, each tier locked to the previous one</li>
         <li>Admin shell through Session Manager: no SSH keys, no open ports</li>
         <li>CloudTrail, VPC Flow Logs and a monthly budget alert</li></ul></div>
@@ -174,7 +174,7 @@
     <h2>Proof, not promises</h2>
     <p class="sub">Every claim on this page is checked by an automated test suite that runs against the live environment and explains each test in plain words.</p>
     <div class="stats">
-      <div class="stat"><b>27 / 27</b><span>automated tests passing (stages 1–3, full regression)</span></div>
+      <div class="stat"><b>35 / 35</b><span>automated tests passing (full regression, all four stages)</span></div>
       <div class="stat"><b>4</b><span>VPCs, all with active flow logs</span></div>
       <div class="stat"><b>0</b><span>security groups open to SSH from the internet</span></div>
       <div class="stat"><b>1</b><span>way into the application: through CloudFront and WAF</span></div>
@@ -188,7 +188,9 @@
       <tr><td>Reach the second spoke through the peered spoke</td><td>No route (peering is not transitive)</td><td class="ok">Pass</td></tr>
       <tr><td>Reach a restricted spoke from the office VPN</td><td>No route (segmentation)</td><td class="ok">Pass</td></tr>
       <tr><td>Block visitors from a country (live drill)</td><td>403, then 200 after revert</td><td class="ok">Pass</td></tr>
-      <tr><td>Stage 4 layers (GuardDuty, Config, DNS Firewall, TLS, isolated data tier)</td><td>Each layer verified</td><td class="warn">Being added</td></tr>
+      <tr><td>Look up a known malware domain from a server</td><td>Blocked by DNS Firewall</td><td class="ok">Pass</td></tr>
+      <tr><td>Reach the database from the office VPN</td><td>No route (isolated data tier)</td><td class="ok">Pass</td></tr>
+      <tr><td>Simulated compromised server: scan, SSH, call home</td><td>Alarms in ~1 min, GuardDuty in ~3 min, contained with the site still up</td><td class="ok">Pass</td></tr>
     </table></div>
   </section>
 

@@ -1,0 +1,265 @@
+Secure AWS Network – demo tests   2026-11-22 13:06
+reading terraform outputs …
+
+How to read the results
+  200 = page served OK   403 = refused by a security rule (WAF / bucket policy / ALB)
+  000 = no answer at all (a firewall dropped the connection)   ping FAIL = no network path
+  ❌ next to Expected means we WANT it to be blocked – a block is a PASS.
+  Commands are shortened for reading; the exact code is in scripts/demo-tests.sh.
+stack: web i-062814b3f6d816842 · spokes on · VPN on · edge on
+
+━━━ T1 · Website reachable ━━━
+  Proves:   the internet reaches the app (Week 1: via the ALB · Week 3: via CloudFront + WAF → ALB)
+  Runs on:  my laptop (= any user on the internet)
+  Command:  curl https://d3hnsy5h7epjwh.cloudfront.net/   → print only the HTTP status code
+  Expected: HTTP 200
+  Result:   200   ✔ PASS
+
+━━━ T2 · Database has no public path ━━━
+  Proves:   the DB name resolves to a private IP and port 3306 is closed from the internet
+  Runs on:  my laptop (= any user on the internet)
+  Command:  dig secnet-db.crk04eokchq0.eu-west-1.rds.amazonaws.com  (which IP?)  +  nc -z secnet-db.crk04eokchq0.eu-west-1.rds.amazonaws.com 3306  (is the DB port reachable?)
+  Expected: 10.0.x.x · port 3306 blocked
+  Result:   10.0.21.206 port 3306 blocked   ✔ PASS
+
+━━━ T3 · Web server has no public IP ━━━
+  Proves:   it can only be reached through the ALB
+  Runs on:  AWS API
+  Command:  aws ec2 describe-instances --instance-ids i-062814b3f6d816842 --query PublicIpAddress
+  Expected: None
+  Result:   None   ✔ PASS
+
+━━━ T4 · Admin shell without SSH ━━━
+  Proves:   Session Manager / Run Command works with no key and no open port
+  Runs on:  inside AWS (no SSH) – Session Manager runs it on the web server
+  Command:  hostname; whoami   (no SSH key, no port 22)
+  Expected: shell on ip-10-0-… as root
+  Result:   shell on ip-10-0-11-40.eu-west-1.compute.internal as root   ✔ PASS
+
+━━━ T5 · App tier can reach the database (allowed path) ━━━
+  Proves:   the SG chain allows web → RDS :3306
+  Runs on:  inside AWS (no SSH) – Session Manager runs it on the web server
+  Command:  open a TCP connection to secnet-db.crk04eokchq0.eu-west-1.rds.amazonaws.com port 3306
+  Expected: port 3306 OPEN
+  Result:   port 3306 OPEN   ✔ PASS
+
+━━━ T7 · Nothing allows SSH or all traffic from the internet ━━━
+  Proves:   no security group in the account opens port 22 or everything to 0.0.0.0/0
+  Runs on:  AWS API
+  Command:  aws ec2 describe-security-groups → count rules that open port 22 or ALL traffic to 0.0.0.0/0
+  Expected: port 22: 0 · all-traffic: 0
+  Result:   SGs with port 22: 0 · all-traffic from internet: 0   ✔ PASS
+
+━━━ T8 · Default security group is empty ━━━
+  Proves:   anything launched without an SG gets no network access
+  Runs on:  AWS API
+  Command:  aws ec2 describe-security-groups --filters vpc=vpc-03ea61bffd9e8fb69 group-name=default → count rules
+  Expected: inbound 0 · outbound 0
+  Result:   inbound 0 · outbound 0   ✔ PASS
+
+━━━ T9 · Private subnets have a second filter (NACL) ━━━
+  Proves:   a stateless subnet-level layer behind the security groups
+  Runs on:  AWS API
+  Command:  aws ec2 describe-network-acls --filters Name=secnet-private-nacl → subnets + deny rules
+  Expected: 2 subnets
+  Result:   2 subnets · 2 deny rules   ✔ PASS
+
+━━━ T10 · Every API call is recorded ━━━
+  Proves:   CloudTrail is logging
+  Runs on:  AWS API
+  Command:  aws cloudtrail get-trail-status --name secnet-trail
+  Expected: IsLogging True
+  Result:   IsLogging True   ✔ PASS
+
+━━━ T13 · Spending is guarded ━━━
+  Proves:   the monthly budget exists and alerts by email
+  Runs on:  AWS API
+  Command:  aws budgets describe-budget --budget-name secnet-monthly
+  Expected: secnet-monthly 50…
+  Result:   secnet-monthly	50.0   ✔ PASS
+
+━━━ T14 · Hub ↔ Spoke A over VPC peering ━━━
+  Proves:   routes on both sides let the hub reach Spoke A
+  Runs on:  inside AWS (no SSH) – Session Manager runs it on the hub web server
+  Command:  ping 10.1.1.34   (Spoke A, via VPC peering)
+  Expected: ping OK
+  Result:   ping OK   ✔ PASS
+
+━━━ T15 · Hub ↔ Spoke B over Transit Gateway ━━━
+  Proves:   the hub reaches Spoke B through the TGW (hub route table)
+  Runs on:  inside AWS (no SSH) – Session Manager runs it on the hub web server
+  Command:  ping 10.2.1.69; curl http://10.2.1.69   (Spoke B, via Transit Gateway)
+  Expected: ping OK Spoke B service
+  Result:   ping OK Spoke B service   ✔ PASS
+
+━━━ T16 · Peering is NOT transitive ━━━
+  Proves:   Spoke A cannot use the hub to reach Spoke B
+  Runs on:  inside AWS (no SSH) – Session Manager runs it on Spoke A
+  Command:  ping 10.2.1.69   (Spoke B – would need to pass THROUGH the hub)
+  Expected: ping FAIL ❌
+  Result:   ping FAIL   ✔ PASS
+
+━━━ T17 · Office reaches the hub over the IPsec VPN ━━━
+  Proves:   encrypted Site-to-Site VPN, office router → hub web server
+  Runs on:  AWS API + inside AWS (no SSH) – Session Manager runs it on the office router
+  Command:  aws ec2 describe-vpn-connections (tunnel status)  +  ping 10.0.11.40 from 192.168.x.x
+  Expected: tunnels UP: 1 · ping OK
+  Result:   tunnels UP: 1 · ping OK   ✔ PASS
+
+━━━ T18 · Segmentation: office cannot reach Spoke B ━━━
+  Proves:   the office TGW route table has no route to 10.2.0.0/16 (Spoke B's SG would allow it)
+  Runs on:  inside AWS (no SSH) – Session Manager runs it on the office router
+  Command:  ping 10.2.1.69   (office → Spoke B)
+  Expected: ping FAIL ❌
+  Result:   ping FAIL   ✔ PASS
+
+━━━ T19 · Spokes have no internet ━━━
+  Proves:   no internet gateway, no NAT in the spokes
+  Runs on:  inside AWS (no SSH) – Session Manager runs it on Spoke A
+  Command:  curl https://aws.amazon.com   (does it have internet?)
+  Expected: internet: 000 ❌
+  Result:   internet: 000   ✔ PASS
+
+━━━ T20 · Private hosts managed through VPC endpoints ━━━
+  Proves:   SSM works in Spoke B with no internet; the SSM name resolves to a private endpoint IP
+  Runs on:  inside AWS (no SSH) – Session Manager runs it on Spoke B
+  Command:  getent hosts ssm.eu-west-1.amazonaws.com   (public name → private IP?)
+  Expected: ssm resolves to 10.2.x.x
+  Result:   ssm resolves to 10.2.1.227   ✔ PASS
+
+━━━ T21 · PrivateLink: one service, one port, no routing ━━━
+  Proves:   the hub reaches Spoke B's web service on :80 only
+  Runs on:  inside AWS (no SSH) – Session Manager runs it on the hub web server
+  Command:  curl http://<privatelink-endpoint>; try TCP 80 and TCP 22
+  Expected: Spoke B service · 80 OPEN · 22 CLOSED
+  Result:   Spoke B service 80 OPEN 22 CLOSED   ✔ PASS
+
+━━━ T26 · All traffic is recorded ━━━
+  Proves:   every VPC in the project has active flow logs
+  Runs on:  AWS API
+  Command:  for every project VPC: aws ec2 describe-flow-logs → status ACTIVE?
+  Expected: N of N VPCs
+  Result:   4 of 4 VPCs have active flow logs   ✔ PASS
+
+━━━ T27 · The S3 bucket behind the site is private ━━━
+  Proves:   only CloudFront (OAC) may read it; direct access is refused
+  Runs on:  my laptop (= any user on the internet)
+  Command:  curl https://secnet-site-871925762150.s3.eu-west-1.amazonaws.com/index.html   (skip CloudFront, go to S3 directly)
+  Expected: 403 ❌
+  Result:   403   ✔ PASS
+
+━━━ T28 · Site served over HTTPS through CloudFront ━━━
+  Proves:   the static site works through the edge
+  Runs on:  my laptop (= any user on the internet)
+  Command:  curl https://d3falscqvrv6jv.cloudfront.net/index.html
+  Expected: 200
+  Result:   200   ✔ PASS
+
+━━━ T29 · WAF blocks SQL injection ━━━
+  Proves:   AWS managed SQLi rules stop the attack at the edge
+  Runs on:  my laptop (= any user on the internet)
+  Command:  curl "https://d3falscqvrv6jv.cloudfront.net/index.html?id=1' OR '1'='1"   (classic SQL injection)
+  Expected: 403 ❌
+  Result:   403   ✔ PASS
+
+━━━ T1b · Nobody can bypass CloudFront ━━━
+  Proves:   the ALB accepts only CloudFront's IP ranges + a secret header; direct access times out
+  Runs on:  my laptop (= any user on the internet)
+  Command:  curl -m 6 http://secnet-alb-2126919923.eu-west-1.elb.amazonaws.com   (skip CloudFront, go to the load balancer directly)
+  Expected: 000 ❌
+  Result:   000   ✔ PASS
+
+━━━ T29b · WAF also protects the web app ━━━
+  Proves:   the same SQL injection against the app (CloudFront → ALB) is blocked at the edge
+  Runs on:  my laptop (= any user on the internet)
+  Command:  curl "https://d3hnsy5h7epjwh.cloudfront.net/?id=1' OR '1'='1"   (SQL injection against the web app)
+  Expected: 403 ❌
+  Result:   403   ✔ PASS
+
+━━━ T30 · WAF blocks cross-site scripting ━━━
+  Proves:   AWS managed common rules stop the XSS payload
+  Runs on:  my laptop (= any user on the internet)
+  Command:  curl "https://d3falscqvrv6jv.cloudfront.net/index.html?q=<script>alert(1)</script>"   (cross-site scripting)
+  Expected: 403 ❌
+  Result:   403   ✔ PASS
+
+━━━ T34 · Private DNS + end-to-end health check ━━━
+  Proves:   db.secnet.internal resolves to a private IP inside the VPC only; Route 53 checkers see CloudFront → ALB → web healthy
+  Runs on:  inside AWS (no SSH) – Session Manager runs it on the web server + AWS API
+  Command:  getent hosts db.secnet.internal  +  aws route53 get-health-check-status
+  Expected: 10.0.x.x · health checkers OK: >0
+  Result:   db.secnet.internal -> 10.0.21.206 · health checkers OK: 16   ✔ PASS
+
+━━━ T42 · Database in isolated data subnets ━━━
+  Proves:   RDS sits in its own subnets whose route table has no way to the internet (D9)
+  Runs on:  AWS API
+  Command:  dig secnet-db.crk04eokchq0.eu-west-1.rds.amazonaws.com (which subnet?)  +  aws ec2 describe-route-tables rtb-0e48587e23b90aac9 → count 0.0.0.0/0 routes
+  Expected: db 10.0.21/22.x · internet routes: 0
+  Result:   db 10.0.21.206 · internet routes: 0   ✔ PASS
+
+━━━ T43 · Office cannot reach the database ━━━
+  Proves:   VPN users reach the hub, never the data tier: no route back + data NACL (D9)
+  Runs on:  inside AWS (no SSH) – Session Manager runs it on the office router
+  Command:  open a TCP connection to secnet-db.crk04eokchq0.eu-west-1.rds.amazonaws.com port 3306   (office → database)
+  Expected: port 3306 CLOSED ❌
+  Result:   port 3306 CLOSED   ✔ PASS
+
+━━━ T5 · …but the app tier still can (regression) ━━━
+  Proves:   web → RDS :3306 still works after moving the DB
+  Runs on:  inside AWS (no SSH) – Session Manager runs it on the web server
+  Command:  open a TCP connection to secnet-db.crk04eokchq0.eu-west-1.rds.amazonaws.com port 3306
+  Expected: port 3306 OPEN
+  Result:   port 3306 OPEN   ✔ PASS
+
+━━━ T44 · Threat detection is on ━━━
+  Proves:   GuardDuty analyses CloudTrail, VPC Flow Logs and DNS queries (D10)
+  Runs on:  AWS API
+  Command:  aws guardduty get-detector --detector-id bcb57f38612a4beca63a9e3752e6f13d → Status
+  Expected: GuardDuty ENABLED
+  Result:   GuardDuty ENABLED   ✔ PASS
+
+━━━ T45 · DNS Firewall blocks bad domains ━━━
+  Proves:   a server cannot look up a domain on the blocklist, even though NAT allows outbound (D12)
+  Runs on:  inside AWS (no SSH) – Session Manager runs it on the web server
+  Command:  DNS lookup of c2.evil-demo.example (on our blocklist) and of aws.amazon.com (normal)
+  Expected: c2.evil-demo.example: BLOCKED ❌ · aws.amazon.com: allowed
+  Result:   c2.evil-demo.example: BLOCKED · aws.amazon.com: allowed   ✔ PASS
+
+━━━ T46 · Misconfigurations are detected continuously ━━━
+  Proves:   AWS Config re-checks every security group on each change (T7, automated – D11)
+  Runs on:  AWS API
+  Command:  aws configservice describe-compliance-by-config-rule (default SG closed · no SSH from internet)
+  Expected: default-sg-closed: COMPLIANT · restricted-ssh: COMPLIANT
+  Result:   default-sg-closed: COMPLIANT · restricted-ssh: COMPLIANT   ✔ PASS
+
+━━━ T47 · One security dashboard ━━━
+  Proves:   Security Hub runs the AWS best-practice checks; Access Analyzer flags external access (D13, D15)
+  Runs on:  AWS API
+  Command:  aws securityhub get-enabled-standards  +  aws accessanalyzer list-analyzers
+  Expected: standards READY: 1 · Access Analyzer: ACTIVE
+  Result:   Security Hub standards READY: 1 · Access Analyzer: ACTIVE   ✔ PASS
+
+━━━ T48 · Every admin session is recorded ━━━
+  Proves:   Session Manager streams each shell (who, when, every command) to CloudWatch (D14)
+  Runs on:  AWS API
+  Command:  aws ssm get-document --name SSM-SessionManagerRunShell → where are sessions logged?
+  Expected: sessions logged to /secnet/ssm-sessions
+  Result:   sessions logged to /secnet/ssm-sessions   ✔ PASS
+
+━━━ T39 · Compromised host is contained, site stays up ━━━
+  Proves:   quarantine SG (no rules) + NACL deny in/out (cuts tracked connections); the rest keeps working
+  Runs on:  AWS API + inside AWS (no SSH) – Session Manager runs it on the web server
+  Command:  victim SG name + NACL deny for 10.0.11.102/32 + ping 10.0.11.102 from web + website through CloudFront
+  Expected: SG secnet-isolation · NACL deny 2 · ping FAIL · website 200
+  SKIP     not deployed (switch off) – nothing to test
+
+━━━ T49 · Encryption in transit is mandatory ━━━
+  Proves:   S3 refuses plain HTTP; MySQL refuses clients without TLS (D15)
+  Runs on:  AWS API
+  Command:  aws s3api get-bucket-policy (site + logs) → deny non-TLS?  +  RDS parameter require_secure_transport
+  Expected: 2 of 2 · require_secure_transport=1
+  Result:   buckets denying non-TLS: 2 of 2 · RDS require_secure_transport=1   ✔ PASS
+
+Summary: 35 passed · 0 failed · 1 skipped
+Manual drills (they change something): T6 drift, T21b NACL deny, T32 geo-block, T33 WAF alarm email, T35–T41 incident, T50 GuardDuty sample finding → email, T51 session log review.
+Log: demo-run-20261122-1306.log
