@@ -13,29 +13,34 @@ Everything is run from the repo root (`aws-secure-network %`). All IDs/IPs/URLs 
 | 4 | `make demo ARGS="--auto"` (smoke test) | 35 passed, T39 skipped |
 | 5 | Open in browser tabs: website (`output -raw cloudfront_url`), app (`output -raw app_url`), GuardDuty findings, CloudWatch alarms, Athena (workgroup `secnet`), email inbox | – |
 | 6 | Have rehearsal evidence ready: `docs/evidence/week4/w4-T3*`, `docs/incidents/IR-001-timeline.md` | fallback |
+| 7 | Open **two terminals, both in the repo folder** (`cd ~/Projects/DEPI/aws-secure-network`), `export AWS_PROFILE=secnet` in each | prompt ends `aws-secure-network %` |
+| 8 | Archive old GuardDuty findings so only the live one shows: `D=$(terraform -chdir=terraform/envs/dev output -raw guardduty_detector_id); aws guardduty archive-findings --detector-id "$D" --finding-ids $(aws guardduty list-findings --detector-id "$D" --query FindingIds --output text)` | GuardDuty Findings list empty |
 
 **Expected noise:** `secnet-hub-ssh-attempt` fires ~5 min after any full test run, because test **T21** probes
 port 22 on the PrivateLink endpoint (blocked, but counted). Not an incident: rule it out by time and source IP
 (the web server) – that is the first triage step in the runbook.
 
-## Running order (≈30 min)
+## Running order (≈28 min, tests in --auto)
 
 | Min | What you show | Command / screen | Running in the background |
 |---|---|---|---|
 | 0–2 | Problem + "a server has just been compromised; we will come back to it" | `make ir-simulate ARGS=--auto` | attack traffic; timeline written |
 | 2–5 | Architecture + traffic-flow diagrams; the website itself is served by the edge we built | website tab | alarms fire at ~min 3–4 |
-| 5–17 | **Full project test, live:** `make demo` (interactive: Enter before each test, so you can explain *Proves / Runs on / Command / Expected*; all 35 tests across the four stages). Short on time: `make demo ARGS="--auto"` runs all of them in ≈4 min while you talk over the output | terminal | GuardDuty finding at ~min 5–8 |
-| 17–20 | **Detect:** alarm emails (3) + GuardDuty email (sev 8, victim instance ID) | inbox, GuardDuty console | – |
-| 20–23 | **Investigate:** Athena saved query **15** (replace X with `output -raw victim_private_ip`) | Athena | – |
-| 23–25 | **Preserve:** evidence snapshot with tags `Case=IR-001`, `Phase=pre-containment` | CLI (runbook) | – |
-| 25–28 | **Contain:** `isolate_victim = true` → plan → yes → apply; `make demo ARGS="--only T39"` | terminal | – |
-| 28–30 | **Audit + lessons:** CloudTrail events; lessons table; production next steps | CloudTrail, runbook | – |
+| 5–12 | **Full project test, live:** `make demo ARGS="--auto"` (all 35 tests in ≈4 min; talk over the output: point at *Proves*, the ❌ = "blocked is what we want", and the summary). Interactive `make demo` only if the slot is ≥ 40 min | terminal 2 | alarms ~min 1–3, GuardDuty ~min 3 |
+| 12–17 | **Detect:** alarm emails (3) + GuardDuty email (sev 8, victim instance ID) | inbox, GuardDuty console | – |
+| 17–21 | **Investigate:** Athena saved query **15** (replace X with `output -raw victim_private_ip`) | Athena | – |
+| 21–23 | **Preserve:** evidence snapshot with tags `Case=IR-001`, `Phase=pre-containment` | CLI (runbook) | – |
+| 23–26 | **Contain:** `sed -i '' 's/^isolate_victim *= *false/isolate_victim   = true/' terraform/envs/dev/terraform.tfvars` → `make plan` → **read the plan line aloud** ("0 to add, 2 to change, 0 to destroy: only the victim's SG and the NACL; approved") → `make apply` → `make demo ARGS="--only T39"` | terminal 1 | – |
+| 26–28 | **Audit + lessons:** CloudTrail events; lessons table; production next steps | CloudTrail, runbook | – |
 
 During the full run, **T39 shows SKIP** (the victim is not isolated yet); it is run on its own after containment.
 The full run also triggers the `secnet-hub-ssh-attempt` alarm (T21 probes port 22): point it out as the
 "rule out your own activity" triage step, next to the real IR-001 alarms (Spoke A rejected flows, GuardDuty).
 
-After the demo: `isolate_victim = false`, then `make sleep`.
+After the demo: `sed -i '' 's/^isolate_victim *= *true/isolate_victim   = false/' terraform/envs/dev/terraform.tfvars` (**always** – otherwise the next build creates the victim already isolated), then `make sleep`.
+
+**Rehearsal 2026-11-22:** all phases passed; total 30–40 min with interactive tests → Phase 3 now uses `--auto`.
+Detection: Spoke A SSH alarm +25 s, rejected-flows +1 min, hub SSH +1.5 min, GuardDuty +2.5 min after the attack ended.
 
 ## Fallbacks
 

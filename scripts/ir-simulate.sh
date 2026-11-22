@@ -41,6 +41,8 @@ VICTIM=$(out victim_instance_id); VIP=$(out victim_private_ip); TARGET=$(out spo
 [ -n "$TARGET" ] || { echo "No Spoke A: enable_hybrid must be true."; exit 1; }
 
 [ -f "$TL" ] || printf '# IR-001 timeline (UTC)\n\n| Time (UTC) | Event | Source | By |\n|---|---|---|---|\n' > "$TL"
+RUN_LABEL="${IR_RUN_LABEL:-rehearsal}"   # e.g. IR_RUN_LABEL=demo make ir-simulate
+printf '\n**Run %s UTC · %s**\n\n| Time (UTC) | Event | Source | By |\n|---|---|---|---|\n' "$(now)" "$RUN_LABEL" >> "$TL"
 mark() { printf '| %s | %s | %s | %s |\n' "$(now)" "$1" "$2" "${3:-simulation script}" >> "$TL"; }
 
 step() {  # step "title" "what an attacker does" "what should detect it"
@@ -95,6 +97,6 @@ echo
 echo "${B}Simulation finished${N} $(now) UTC. Timeline: ${TL}"
 echo "${Y}What to watch next${N}"
 echo "  ≈5 min   CloudWatch alarms → email (secnet-network-alerts): spoke_a rejected-flows spike, spoke_a SSH attempt"
-echo "  ≈10 min  flow logs land in S3 → Athena queries 11 (port 22), 12 (port scan), 14 (host timeline: ${VIP})"
+echo "  ≈10 min  flow logs land in S3 → Athena saved query 15 (victim lateral movement: replace 10.0.11.X with ${VIP})"
 echo "  ≈5–20 min GuardDuty finding Backdoor:EC2/C&CActivity.B!DNS → email (secnet-security-findings)"
 echo "  Then: preserve evidence (snapshot) BEFORE containment – see docs/runbooks/ir-runbook.md"
